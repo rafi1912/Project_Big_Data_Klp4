@@ -1,0 +1,8 @@
+pyspark>=3.5
+pyyaml
+pandas
+numpy
+pyarrow
+streamlit
+plotly
+kagglehub        # hanya untuk scripts/download_datasets.py

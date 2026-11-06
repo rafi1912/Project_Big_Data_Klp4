@@ -1,0 +1,31 @@
+# Python environments and cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Credentials and local environment files
+.env
+.env.*
+!.env.example
+kaggle.json
+**/kaggle.json
+
+# Downloaded datasets and generated data lake outputs
+data/**
+!data/**/
+!data/**/.gitkeep
+
+# Trained Spark/ML model outputs
+models/**
+!models/**/
+!models/**/.gitkeep
+!models/**/README.md
+
+# Spark local output
+.sparkStaging/
+metastore_db/
+spark-warehouse/
+*.log
+.DS_Store
