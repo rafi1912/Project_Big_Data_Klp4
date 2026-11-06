@@ -1,0 +1,95 @@
+{
+  "files": [
+    {
+      "name": "bot_detection_data.csv",
+      "sha256": "78f8faad3f330921db2c125842520c948a34f50e1473d83eb3c5391c73ec4d7a",
+      "rows": 50000,
+      "batch_id": "20261105T073750",
+      "size_bytes": 7464611
+    }
+  ],
+  "original_columns": [
+    "User ID",
+    "Username",
+    "Tweet",
+    "Retweet Count",
+    "Mention Count",
+    "Follower Count",
+    "Verified",
+    "Bot Label",
+    "Location",
+    "Created At",
+    "Hashtags"
+  ],
+  "bronze_schema": {
+    "fields": [
+      {
+        "metadata": {},
+        "name": "user_id",
+        "nullable": true,
+        "type": "integer"
+      },
+      {
+        "metadata": {},
+        "name": "username",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "metadata": {},
+        "name": "tweet",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "metadata": {},
+        "name": "retweet_count",
+        "nullable": true,
+        "type": "integer"
+      },
+      {
+        "metadata": {},
+        "name": "mention_count",
+        "nullable": true,
+        "type": "integer"
+      },
+      {
+        "metadata": {},
+        "name": "follower_count",
+        "nullable": true,
+        "type": "integer"
+      },
+      {
+        "metadata": {},
+        "name": "verified",
+        "nullable": true,
+        "type": "boolean"
+      },
+      {
+        "metadata": {},
+        "name": "bot_label",
+        "nullable": true,
+        "type": "integer"
+      },
+      {
+        "metadata": {},
+        "name": "location",
+        "nullable": true,
+        "type": "string"
+      },
+      {
+        "metadata": {},
+        "name": "created_at",
+        "nullable": true,
+        "type": "timestamp"
+      },
+      {
+        "metadata": {},
+        "name": "hashtags",
+        "nullable": true,
+        "type": "string"
+      }
+    ],
+    "type": "struct"
+  }
+}

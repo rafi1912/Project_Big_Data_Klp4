@@ -1,0 +1,49 @@
+{
+  "dataset": "twitter_bot_detection",
+  "best_model": "LogisticRegression",
+  "n_train": 34999,
+  "n_val": 7500,
+  "n_test": 7501,
+  "features_numeric": [
+    "retweet_count",
+    "mention_count",
+    "follower_count",
+    "verified",
+    "tweet_len",
+    "tweet_words",
+    "created_at_hour",
+    "created_at_dow"
+  ],
+  "features_categorical": [],
+  "features_skipped": [
+    "location"
+  ],
+  "leakage_excluded": [],
+  "baseline_majority_accuracy": 0.500333288894814,
+  "test_auc": 0.4985135690807012,
+  "test": {
+    "tp": 2004,
+    "fp": 2019,
+    "tn": 1729,
+    "fn": 1749,
+    "accuracy": 0.4976669777363018,
+    "precision_bot": 0.4981357196122297,
+    "recall_bot": 0.533972821742606,
+    "f1_bot": 0.5154320987654321
+  },
+  "models": {
+    "LogisticRegression": {
+      "val_auc": 0.5047609630470163,
+      "test_auc": 0.4985090547270472
+    },
+    "RandomForest": {
+      "val_auc": 0.5045153095564647,
+      "test_auc": 0.5070749519203563
+    },
+    "GBT": {
+      "val_auc": 0.49772398076556995,
+      "test_auc": 0.504743341577183
+    }
+  },
+  "verdict": "LEMAH — ROC-AUC uji < 0.60: model tidak lebih baik dari tebakan. Fitur pada dataset ini tampaknya tidak memuat sinyal pembeda bot/bukan-bot (indikasi data sintetis acak). Jangan diklaim sebagai kemampuan deteksi."
+}

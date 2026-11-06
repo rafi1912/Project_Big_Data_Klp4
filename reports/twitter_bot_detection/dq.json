@@ -1,0 +1,61 @@
+{
+  "dataset": "twitter_bot_detection",
+  "platform": "Twitter/X",
+  "note": "50.000 baris, kemungkinan sintetis (tweet acak, distribusi seragam).",
+  "rows_raw": 50000,
+  "duplicate_rows_removed": 0,
+  "rows_without_label_removed": 0,
+  "rows_clean": 50000,
+  "duplicate_record_ids": 0,
+  "label_column": "bot_label",
+  "label_raw_values": {
+    "1": 25018,
+    "0": 24982
+  },
+  "label_counts": {
+    "1": 25018,
+    "0": 24982
+  },
+  "null_pct_by_column": {
+    "retweet_count": 0.0,
+    "mention_count": 0.0,
+    "follower_count": 0.0,
+    "verified": 0.0,
+    "location": 0.0,
+    "record_id": 0.0,
+    "username_ref": 0.0,
+    "label": 0.0,
+    "tweet_len": 0.0,
+    "tweet_words": 0.0,
+    "hashtags_n": 0.0,
+    "event_ts": 0.0,
+    "created_at_hour": 0.0,
+    "created_at_dow": 0.0
+  },
+  "numeric_features": [
+    "retweet_count",
+    "mention_count",
+    "follower_count",
+    "verified",
+    "tweet_len",
+    "tweet_words",
+    "hashtags_n",
+    "created_at_hour",
+    "created_at_dow"
+  ],
+  "categorical_cardinality": {
+    "location": 25199
+  },
+  "corr_with_label": {
+    "retweet_count": 0.0012,
+    "mention_count": -0.0069,
+    "follower_count": 0.0012,
+    "verified": -0.0026,
+    "tweet_len": 0.0009,
+    "tweet_words": -0.0013,
+    "hashtags_n": null,
+    "created_at_hour": 0.0022,
+    "created_at_dow": -0.001
+  },
+  "leakage_suspects": []
+}
