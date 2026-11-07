@@ -1295,21 +1295,12 @@ def to_records(df, cols):
 
 
 def mongo_settings():
-    env = {}
-    p = ROOT / ".env.mongo"
-    if p.exists():
-        for line in p.read_text().splitlines():
-            if "=" in line and not line.strip().startswith("#"):
-                k, v = line.split("=", 1)
-                env[k.strip()] = v.strip()
-    env.update({k: v for k, v in os.environ.items() if k.startswith("MONGO")})
-    user, pw = env.get("MONGO_INITDB_ROOT_USERNAME"), env.get("MONGO_INITDB_ROOT_PASSWORD")
-    host, port = env.get("MONGO_HOST", "127.0.0.1"), env.get("MONGO_PORT", "27017")
-    db = env.get("MONGO_DB", "socmed_bot_detection")
-    uri = env.get("MONGO_URI") or (f"mongodb://{user}:{pw}@{host}:{port}/?authSource=admin" if user
-                                   else f"mongodb://{host}:{port}/")
-    redacted = uri.replace(pw, "<password>") if pw else uri
-    return uri, db, redacted
+    """(uri, database, redacted uri) from MONGO_URI / MONGO_DB, or from the parts
+    (MONGO_INITDB_ROOT_USERNAME/PASSWORD, MONGO_HOST/MONGO_PORT). The repo-root .env is read
+    first; variables already set in the environment win, as before."""
+    common.load_env()
+    uri = common.mongo_uri()
+    return uri, os.environ.get("MONGO_DB", common.DEFAULT_MONGO_DB), common.redact_uri(uri)
 
 
 def jsonable(o):
@@ -1776,8 +1767,8 @@ def main():
         log(f"  account_scores written via: {write_path}")
         queries, counts = verify_mongo(db, acc, risk)
         payload["mongodb"] = {
-            "connection_uri": redacted, "database": dbname, "container": "socmed-mongo (mongo:7.0)",
-            "compose_file": "deploy/mongodb/docker-compose.yml", "credentials_file": ".env.mongo (chmod 600)",
+            "connection_uri": redacted, "database": dbname, "image": "mongo:7.0",
+            "compose_file": "deploy/mongodb/docker-compose.yml", "credentials_file": ".env (chmod 600, never committed)",
             "account_scores_write_path": write_path, "collection_counts": counts,
             "verification_queries": queries,
         }
