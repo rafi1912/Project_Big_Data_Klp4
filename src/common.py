@@ -4,7 +4,9 @@
 (stream.py) sehingga fitur yang dilihat model saat training dan saat
 scoring identik (mencegah training-serving skew).
 """
+import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -230,6 +232,25 @@ def importance_table(model, feature_names: list[str], top_n: int | None = None) 
     for i, r in enumerate(rows, 1):
         r["rank"] = i
     return rows[:top_n] if top_n else rows
+
+
+def save_metrics(payload: dict, track: str) -> Path:
+    """Write one track's result bundle to outputs/metrics/<track>.json."""
+    payload = dict(payload)
+    payload["_generated_at"] = datetime.now(timezone.utc).isoformat()
+    payload["_track"] = track
+    path = OUT_METRICS / f"{track}.json"
+    path.write_text(json.dumps(payload, indent=2, default=str))
+    return path
+
+
+def save_predictions(sdf, track: str, columns: list[str] | None = None) -> Path:
+    """Write per-account scores as a single CSV for MongoDB / Power BI loading."""
+    import pandas as pd  # noqa: F401
+    pdf = (sdf.select(*columns) if columns else sdf).toPandas()
+    path = OUT_PREDICTIONS / f"{track}_scored.csv"
+    pdf.to_csv(path, index=False)
+    return path
 
 
 def detect_label(columns, configured=None):
