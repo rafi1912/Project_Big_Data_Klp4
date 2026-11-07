@@ -168,7 +168,6 @@ def run(spark):
     log(f"headline split: train={len(train)} (fake {train.label.sum()})  test={len(test)} (fake {test.label.sum()})")
 
     # duplicates straddling the split = the same feature vector seen in training and test
-    feats_raw = [v for v in RENAME.values() if v != "label"]
     test_keys = set(test.account_key)
     straddle = [g for g in audit["exact_duplicate_groups"]
                 if any(k in test_keys for k in g) and any(k not in test_keys for k in g)]

@@ -128,7 +128,6 @@ def to_spark(spark, pdf: pd.DataFrame):
 def score(model, sdf, keep: Iterable[str]):
     """Apply a fitted pipeline; return Spark DF with p_inauthentic as a plain column."""
     from pyspark.ml.functions import vector_to_array
-    from pyspark.sql import functions as F
     pred = model.transform(sdf)
     return pred.withColumn("p_inauthentic", vector_to_array("probability").getItem(1)) \
                .select(*keep, "label", "prediction", "probability", "p_inauthentic")
