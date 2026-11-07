@@ -43,6 +43,17 @@ cd .. && streamlit run app/streamlit_app.py
 Menambah dataset baru = tambah satu blok di `config.yaml` (label, kolom ID/teks/waktu). Kolom label
 dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashboard → **verifikasi pemetaan 0/1**.
 
+## Catatan migrasi
+- **Nama kolom berawalan `#` berubah** (perbaikan `snake()`): `#friends` → `n_friends`,
+  `#tags/post` → `n_tags_post` (sebelumnya `#tags/post` dan `tags/post` sama-sama menjadi `tags_post`
+  sehingga Spark gagal dengan `AMBIGUOUS_REFERENCE`). Dataset yang terdampak: `facebook_spam` dan
+  `instagram_fake_spammer`. Bronze/silver yang dibangun dengan nama lama harus dibangun ulang.
+  Manifest ingest ikut dihapus, karena `ingest.py` melewati file yang sudah tercatat di manifest
+  walaupun bronze-nya sudah tidak ada:
+  ```bash
+  rm -rf data/bronze data/silver reports/*/ingest_manifest.json && bash run_all.sh
+  ```
+
 ## Environment variables
 | Variabel | Wajib? | Dipakai oleh | Keterangan |
 |---|---|---|---|
