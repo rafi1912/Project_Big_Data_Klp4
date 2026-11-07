@@ -147,6 +147,91 @@ def assembled_feature_names(df, features_col: str = "features") -> list[str]:
     return [name for _, name in sorted(indexed)]
 
 
+def evaluate_binary(predictions, label_col: str = "label",
+                    pred_col: str = "prediction",
+                    prob_col: str = "probability") -> dict:
+    """Full binary metric set for one fitted model's test predictions.
+
+    Positive class (1) is the inauthentic / bot / spam class.
+    Accuracy alone is never enough here, so precision, recall, F1,
+    balanced accuracy, MCC and both AUCs are always reported, together
+    with the majority-class baseline to compare against.
+    """
+    import math
+    from pyspark.ml.evaluation import BinaryClassificationEvaluator
+
+    rows = predictions.groupBy(label_col, pred_col).count().collect()
+    counts = {(int(r[label_col]), int(r[pred_col])): r["count"] for r in rows}
+    tp = counts.get((1, 1), 0)
+    fp = counts.get((0, 1), 0)
+    tn = counts.get((0, 0), 0)
+    fn = counts.get((1, 0), 0)
+    n = tp + fp + tn + fn
+
+    def _safe(num, den):
+        return float(num) / den if den else 0.0
+
+    precision = _safe(tp, tp + fp)
+    recall = _safe(tp, tp + fn)
+    specificity = _safe(tn, tn + fp)
+    f1 = _safe(2 * precision * recall, precision + recall)
+
+    mcc_den = math.sqrt(float(tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    mcc = ((tp * tn) - (fp * fn)) / mcc_den if mcc_den else 0.0
+
+    out = {
+        "confusion_matrix": {
+            "true_negative": tn, "false_positive": fp,
+            "false_negative": fn, "true_positive": tp,
+        },
+        "n_test": n,
+        "accuracy": round(_safe(tp + tn, n), 4),
+        "precision_positive": round(precision, 4),
+        "recall_positive": round(recall, 4),
+        "f1_positive": round(f1, 4),
+        "specificity": round(specificity, 4),
+        "balanced_accuracy": round((recall + specificity) / 2, 4),
+        "mcc": round(mcc, 4),
+    }
+
+    if prob_col and prob_col in predictions.columns:
+        for metric, key in (("areaUnderROC", "roc_auc"), ("areaUnderPR", "pr_auc")):
+            ev = BinaryClassificationEvaluator(
+                labelCol=label_col, rawPredictionCol=prob_col, metricName=metric)
+            out[key] = round(ev.evaluate(predictions), 4)
+
+    # Majority-class baseline: what you would score by always predicting
+    # the larger class. Any model must clearly beat this to mean anything.
+    n_pos = tp + fn
+    n_neg = tn + fp
+    majority_acc = _safe(max(n_pos, n_neg), n)
+    out["baseline_majority_class"] = {
+        "predicts": 1 if n_pos >= n_neg else 0,
+        "accuracy": round(majority_acc, 4),
+        "accuracy_lift_of_model": round(out["accuracy"] - majority_acc, 4),
+    }
+    return out
+
+
+def importance_table(model, feature_names: list[str], top_n: int | None = None) -> list[dict]:
+    """Rank features for a fitted RandomForest or LogisticRegression stage."""
+    if hasattr(model, "featureImportances"):
+        vals = model.featureImportances.toArray()
+        key = "importance"
+    elif hasattr(model, "coefficients"):
+        vals = model.coefficients.toArray()
+        key = "coefficient"
+    else:
+        raise TypeError(f"no importances or coefficients on {type(model).__name__}")
+
+    rows = [{"feature": n, key: round(float(v), 6)}
+            for n, v in zip(feature_names, vals)]
+    rows.sort(key=lambda r: abs(r[key]), reverse=True)
+    for i, r in enumerate(rows, 1):
+        r["rank"] = i
+    return rows[:top_n] if top_n else rows
+
+
 def detect_label(columns, configured=None):
     cols = [snake(c) for c in columns]
     if configured:
