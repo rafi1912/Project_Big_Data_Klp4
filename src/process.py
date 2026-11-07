@@ -12,8 +12,7 @@ import pandas as pd
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from common import (detect_label, get_spark, load_config, path_of, report_dir,
-                    snake, standardize)
+from common import detect_label, get_spark, load_config, path_of, report_dir, standardize
 
 META = ["_source_file", "_ingested_at", "_batch_id"]
 
