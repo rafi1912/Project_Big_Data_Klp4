@@ -22,7 +22,7 @@ import common  # noqa: E402
 START_CMD = "docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d"
 PAGES = ["Arsitektur & Data Lake", "Kualitas Data", "EDA", "Model & Evaluasi", "Streaming (simulasi)",
          "Antrean Review Moderator"]
-PIPELINE_PAGES = PAGES[1:6]
+PIPELINE_PAGES = PAGES[1:5]
 st.set_page_config(page_title="Deteksi Akun Bot — Big Data", page_icon="🤖", layout="wide")
 
 
@@ -65,6 +65,8 @@ def need(ok: bool, msg: str):
 
 NO_PIPELINE = ("Belum ada hasil pipeline batch di MongoDB. Jalankan `bash run_all.sh` (memuat hasil ke MongoDB "
                "di langkah terakhir) atau `python scripts/seed_demo.py` untuk data demo.")
+NO_SYNTHESIS = ("Belum ada hasil sintesis di MongoDB. Jalankan pipeline analisis lalu `python src/synthesis.py`, "
+                "atau `python scripts/seed_demo.py` untuk data demo.")
 
 # ---------------------------------------------------------------- sidebar
 cfg_df = find("pipeline_datasets")
@@ -258,18 +260,42 @@ elif page == "Streaming (simulasi)":
 
 # ---------------------------------------------------------------- 6
 else:
-    st.title(f"Antrean review moderator · {ds}")
-    st.warning("Skor adalah **sinyal bantu** untuk memprioritaskan pemeriksaan manusia — bukan dasar tunggal "
-               "untuk menghapus atau menghukum akun.")
-    p = find("pipeline_test_predictions", {"dataset": ds})
-    need(len(p) > 0, "Prediksi data uji belum dimuat untuk dataset ini.")
-    thr = st.slider("Ambang skor bot", 0.0, 1.0, float(info.get(ds, {}).get("alert_threshold", 0.8)), 0.01)
-    top = st.number_input("Tampilkan N akun teratas", 5, 500, 25)
-    sel = p[p.prob_bot >= thr].sort_values("prob_bot", ascending=False)
-    c = st.columns(3)
-    c[0].metric("Akun di atas ambang", f"{len(sel):,}")
-    c[1].metric("Precision pada ambang ini", f"{sel['label'].mean():.3f}" if len(sel) else "—")
-    c[2].metric("Base rate bot (uji)", f"{p['label'].mean():.3f}")
-    cols = [x for x in ["record_id", "username_ref", "prob_bot", "label"] if x in sel.columns]
-    st.dataframe(sel[cols].head(int(top)).rename(columns={"label": "label_sebenarnya"}), width="stretch",
-                 hide_index=True)
+    st.title("Antrean review moderator")
+    st.warning("Skor dan level adalah **sinyal bantu** untuk memprioritaskan pemeriksaan manusia — bukan dasar "
+               "tunggal untuk menghapus atau menghukum akun. Tidak ada aksi otomatis.")
+    sets = sorted(db["account_scores"].distinct("dataset"))
+    need(bool(sets), NO_SYNTHESIS)
+    d = st.selectbox("Dataset", sets, key="queue_dataset")
+    codes = sorted(db["account_scores"].distinct("risk_level_code", {"dataset": d}))
+    default = [c for c in ("2",) if c in codes] or codes
+    pick = st.multiselect("Level risiko", codes, default=default,
+                          format_func=lambda c: f"{c} · {(one('risk_level_definitions', {'code': c}) or {}).get('name_id', c)}")
+    top = int(st.number_input("Tampilkan N akun teratas", 5, 500, 25))
+    acc = find("account_scores", {"dataset": d})
+    scored = acc["rf_p_inauthentic"].notna().any()
+    labelled = acc["label"].notna()
+    if scored:
+        thr = st.slider("Ambang skor model (untuk menilai precision)", 0.0, 1.0, 0.5, 0.01)
+        lab = acc[labelled]
+        sel = lab[lab["rf_p_inauthentic"] >= thr]
+        c = st.columns(4)
+        c[0].metric("Akun di level terpilih", f"{acc['risk_level_code'].isin(pick).sum():,}")
+        c[1].metric("Akun berlabel di atas ambang", f"{len(sel):,}")
+        c[2].metric("Precision pada ambang ini", f"{sel['label'].mean():.3f}" if len(sel) else "—")
+        c[3].metric("Base rate (acak)", f"{lab['label'].mean():.3f}" if len(lab) else "—")
+        st.caption("Precision dan base rate dihitung dari label evaluasi (hanya untuk menilai antrean). Bila "
+                   "precision ≈ base rate, antrean tidak lebih baik daripada memilih akun secara acak. Label tidak "
+                   "ditampilkan di tabel operasional.")
+    else:
+        st.caption("Dataset ini tidak berlabel dan tidak punya skor model: urutan memakai level dan tier indikator.")
+    q = acc[acc["risk_level_code"].isin(pick)]
+    q = q.sort_values(["rf_p_inauthentic"] if scored else ["risk_level_code", "tiktok_review_tier"],
+                      ascending=False, na_position="last")
+    cols = ["account_uid", "source_ref", "rf_p_inauthentic", "risk_level_code", "risk_level_name", "suggested_action"]
+    if not scored:
+        cols += [c for c in acc.columns if c.startswith("ind_") or c.startswith("tiktok_")]
+    if q["risk_level_basis"].eq("evidence_gate_failed_no_signal").any():
+        st.error("Model dataset ini **gagal evidence gate** (tidak lebih baik daripada acak): semua akun berstatus "
+                 "*Tidak dapat dinilai* (NA), bukan Level 0.")
+    st.dataframe(q[[c for c in cols if c in q.columns]].head(top), width="stretch", hide_index=True)
+
