@@ -70,6 +70,19 @@ datasets:
       PERINGATAN: file tersusun dua blok menurut label (legit dulu, lalu spam), jadi akurasi tinggi
       di sini terutama mempelajari blok file, bukan perilaku spam. Kasus peringatan, bukan hasil utama.
 
+# ------------------------------------------------------------
+# Dataset TANPA label: hanya dipakai jalur analisis (src/tiktok_pipeline.py) dan ikut diunduh
+# oleh scripts/download_datasets.py. TIDAK ikut ingest/process/train, karena tahap itu
+# membutuhkan kolom label. Tidak ada label yang dibuat-buat untuk dataset ini.
+# ------------------------------------------------------------
+unlabelled_datasets:
+  tiktok_videos:
+    platform: TikTok
+    kaggle: haziqhalifi/tiktok-2025-dataset
+    files: [tiktok_merged_data_deduplicated.csv]
+    unit: video (dianalisis per author)
+    note: "7.225 video tanpa label bot; profil perilaku per author + indikator anomali untuk tinjauan manusia."
+
 modeling:
   seed: 42
   split: [0.70, 0.15, 0.15]      # train / validasi / uji

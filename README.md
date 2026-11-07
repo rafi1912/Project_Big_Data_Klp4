@@ -71,6 +71,7 @@ ke `outputs/` (metrik JSON, gambar) serta `outputs/predictions/` (skor per akun,
 | `src/twitter_pipeline.py` | `twitter_bot_detection` (kontrol negatif), `twitter_human_bots` (hasil utama X) | `outputs/metrics/twitter_{synthetic,real}.json`, gambar `outputs/figures/twitter_*.png` |
 | `src/instagram_pipeline.py` | `instagram_fake_spammer` (`train.csv` + `test.csv`, digabung lalu di-split ulang) | `outputs/metrics/instagram.json`, `outputs/figures/instagram_*.png` |
 | `src/facebook_pipeline.py` | `facebook_spam` (kasus peringatan: file urut per label) | `outputs/metrics/facebook.json`, `outputs/figures/facebook_*.png` |
+| `src/tiktok_pipeline.py` | `tiktok_videos` (blok `unlabelled_datasets`, **tanpa label**) | `outputs/metrics/tiktok.json`, `outputs/figures/tiktok_*.png`; profil per author di `outputs/predictions/` |
 
 ```bash
 python src/twitter_faker_check.py          # beberapa detik, tanpa Spark
@@ -78,12 +79,18 @@ python src/twitter_pipeline.py             # ±20 menit (CV 3-fold Random Forest
 python src/twitter_pipeline.py --dataset real
 python src/instagram_pipeline.py           # ±2 menit
 python src/facebook_pipeline.py            # ±2 menit
+python src/tiktok_pipeline.py              # ±2 menit; jalankan SETELAH track lain (membaca metriknya)
 ```
 Prosedurnya sama untuk setiap dataset: split berstrata 80:20 (seed 42), bobot kelas dari data latih,
 CV 3-fold di dalam data latih, Random Forest (model utama) dan Logistic Regression (baseline), lalu
 satu kali evaluasi di data uji terhadap baseline kelas mayoritas.
 Instagram dan Facebook berbagi definisi model di `src/profile_tracks_utils.py`; karena datanya kecil
 (696 dan 600 akun), keduanya juga melaporkan CV berulang di dalam data latih dan interval bootstrap.
+
+TikTok berbeda: datanya **tidak berlabel**, jadi tidak ada classifier dan tidak ada akurasi. Pipeline
+membangun profil perilaku per author (handle diganti kunci pseudonim) dan indikator anomali tanpa
+supervisi untuk tinjauan manusia. Dataset ini ada di blok `unlabelled_datasets` di `config.yaml`:
+ikut diunduh `scripts/download_datasets.py`, tetapi tidak ikut ingest/process/train (tahap itu butuh label).
 
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
