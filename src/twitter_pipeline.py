@@ -258,7 +258,6 @@ def p1_col():
 
 def score_pandas(spark, model, pdf: pd.DataFrame, schema) -> np.ndarray:
     """Score a pandas frame with a fitted PipelineModel; order-safe via _pos."""
-    from pyspark.sql import functions as F
     pdf = pdf.copy()
     pdf["_pos"] = np.arange(len(pdf), dtype=np.int64)
     from pyspark.sql import types as T
@@ -723,7 +722,6 @@ def synthetic_validation(pdf: pd.DataFrame) -> dict:
     # Document-frequency of each word per class, then one 2x2 chi-square per word.
     from sklearn.feature_extraction.text import CountVectorizer as SkCV
     X = SkCV(binary=True, token_pattern=r"[a-z]+", lowercase=True).fit(pdf["tweet"])
-    words = X.get_feature_names_out()
     M = X.transform(pdf["tweet"])
     df_pos = np.asarray(M[y == 1].sum(0)).ravel()
     df_neg = np.asarray(M[y == 0].sum(0)).ravel()
@@ -756,7 +754,6 @@ def synthetic_validation(pdf: pd.DataFrame) -> dict:
 
 
 def run_synthetic(spark) -> dict:
-    from pyspark.sql import functions as F
     track = "twitter_synthetic"
     log(f"[{track}] loading {SYN_PATH.relative_to(common.PROJECT_ROOT)}")
     df = load_synthetic(spark).cache()
@@ -1032,7 +1029,6 @@ def collinearity_diagnostic(spark, train_w, test, best_rf_depth, best_lr_reg) ->
     from pyspark.ml import Pipeline
     from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
     from pyspark.ml.feature import StandardScaler, VectorAssembler
-    from pyspark.sql import functions as F
 
     pdf = train_w.select(*dict.fromkeys(["statuses_count", "average_tweets_per_day",
                                          "account_age_days", "log_statuses_count",
