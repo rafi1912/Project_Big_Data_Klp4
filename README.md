@@ -69,15 +69,21 @@ ke `outputs/` (metrik JSON, gambar) serta `outputs/predictions/` (skor per akun,
 |---|---|---|
 | `src/twitter_faker_check.py` | `twitter_bot_detection` | `outputs/metrics/twitter_synthetic_faker_check.json` (bukti dataset sintetis) |
 | `src/twitter_pipeline.py` | `twitter_bot_detection` (kontrol negatif), `twitter_human_bots` (hasil utama X) | `outputs/metrics/twitter_{synthetic,real}.json`, gambar `outputs/figures/twitter_*.png` |
+| `src/instagram_pipeline.py` | `instagram_fake_spammer` (`train.csv` + `test.csv`, digabung lalu di-split ulang) | `outputs/metrics/instagram.json`, `outputs/figures/instagram_*.png` |
+| `src/facebook_pipeline.py` | `facebook_spam` (kasus peringatan: file urut per label) | `outputs/metrics/facebook.json`, `outputs/figures/facebook_*.png` |
 
 ```bash
 python src/twitter_faker_check.py          # beberapa detik, tanpa Spark
 python src/twitter_pipeline.py             # ±20 menit (CV 3-fold Random Forest pada 37 ribu akun)
 python src/twitter_pipeline.py --dataset real
+python src/instagram_pipeline.py           # ±2 menit
+python src/facebook_pipeline.py            # ±2 menit
 ```
 Prosedurnya sama untuk setiap dataset: split berstrata 80:20 (seed 42), bobot kelas dari data latih,
 CV 3-fold di dalam data latih, Random Forest (model utama) dan Logistic Regression (baseline), lalu
 satu kali evaluasi di data uji terhadap baseline kelas mayoritas.
+Instagram dan Facebook berbagi definisi model di `src/profile_tracks_utils.py`; karena datanya kecil
+(696 dan 600 akun), keduanya juga melaporkan CV berulang di dalam data latih dan interval bootstrap.
 
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
