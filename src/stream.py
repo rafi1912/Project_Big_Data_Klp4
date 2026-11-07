@@ -3,10 +3,14 @@
 Membaca file CSV micro-batch yang 'jatuh' ke data/stream/incoming/<dataset>/ (disimulasikan oleh
 simulate_feed.py; di produksi sumbernya Kafka/Kinesis), menerapkan standardize() yang SAMA dengan
 jalur batch, lalu memberi skor memakai model terbaik hasil training.
-Keluaran: data/gold/stream_scores/<dataset>/ (parquet) -> dibaca dashboard Streamlit.
+Keluaran: setiap micro-batch ditulis ke MongoDB, koleksi `stream_scores` (dibaca dashboard
+Streamlit), dan tetap juga ke data/gold/stream_scores/<dataset>/ (parquet).
+Checkpoint baru (mis. setelah `simulate_feed.py --reset`) = skor streaming lama dataset itu di
+MongoDB ikut dihapus, sama seperti parquet-nya.
 
   python stream.py <dataset> --once        # proses semua file yang ada lalu berhenti
   python stream.py <dataset>               # jalan terus (Ctrl+C untuk berhenti)
+  python stream.py <dataset> --no-mongo    # parquet saja, tanpa MongoDB
 """
 import argparse, json
 
@@ -15,13 +19,31 @@ from pyspark.ml.functions import vector_to_array
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from common import get_spark, load_config, path_of, report_dir, standardize
+from common import get_mongo, get_spark, load_config, path_of, report_dir, standardize
+
+START_CMD = "docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d"
+
+
+def mongo_collection(key, fresh_start):
+    """Koleksi stream_scores, atau berhenti dengan pesan jelas bila MongoDB tidak terjangkau."""
+    client, db = get_mongo(timeout_ms=3000)
+    try:
+        client.admin.command("ping")
+    except Exception as e:
+        raise SystemExit(f"[stream] MongoDB tidak terjangkau ({type(e).__name__}). Nyalakan dari root repo:\n"
+                         f"  {START_CMD}\natau jalankan dengan --no-mongo (parquet saja).")
+    coll = db["stream_scores"]
+    coll.create_index([("dataset", 1), ("batch_id", 1)])
+    if fresh_start:
+        coll.delete_many({"dataset": key})
+    return coll
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("dataset"); ap.add_argument("--once", action="store_true")
     ap.add_argument("--interval", default="5 seconds")
+    ap.add_argument("--no-mongo", action="store_true", help="tulis parquet saja, tanpa MongoDB")
     a = ap.parse_args()
     cfg, spark = load_config(), get_spark("stream")
     key, ds = a.dataset, cfg["datasets"][a.dataset]
@@ -33,6 +55,7 @@ def main():
     src = path_of(cfg, "stream_in", key); src.mkdir(parents=True, exist_ok=True)
     out = path_of(cfg, "stream_out", key); out.mkdir(parents=True, exist_ok=True)
     ckpt = path_of(cfg, "checkpoint", key)
+    coll = None if a.no_mongo else mongo_collection(key, fresh_start=not ckpt.exists())
 
     raw = (spark.readStream.schema(schema).option("header", True).option("multiLine", True)
            .option("escape", '"').option("maxFilesPerTrigger", 1).csv(str(src)))
@@ -49,7 +72,14 @@ def main():
     def sink(batch_df, batch_id):
         n = batch_df.count()
         if n:
-            batch_df.withColumn("batch_id", F.lit(int(batch_id))).write.mode("append").parquet(str(out))
+            # persist: parquet dan MongoDB menerima baris yang sama (termasuk scored_at)
+            batch = batch_df.withColumn("batch_id", F.lit(int(batch_id))).persist()
+            batch.write.mode("append").parquet(str(out))
+            if coll is not None:
+                docs = [{"dataset": key, **r.asDict()} for r in batch.collect()]
+                coll.delete_many({"dataset": key, "batch_id": int(batch_id)})   # idempoten bila batch diulang
+                coll.insert_many(docs)
+            batch.unpersist()
         print(f"[stream] micro-batch {batch_id}: {n} akun diberi skor", flush=True)
 
     w = result.writeStream.foreachBatch(sink).option("checkpointLocation", str(ckpt))
