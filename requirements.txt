@@ -1,4 +1,5 @@
 pyspark==3.5.3     # dikunci: versi yang dipakai saat verifikasi; Spark 4 (ANSI default, Scala 2.13) belum diuji
+setuptools         # pyspark 3.5 (pyspark.ml) masih meng-import distutils, yang dihapus di Python 3.12
 pyyaml
 pandas
 numpy

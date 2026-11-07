@@ -1,11 +1,20 @@
-"""Utilitas bersama: konfigurasi, SparkSession, dan standardisasi skema.
+"""Utilitas bersama untuk semua skrip di src/: konfigurasi, SparkSession, standardisasi skema,
+helper jalur analisis, dan koneksi MongoDB.
 
 `standardize()` dipakai oleh jalur BATCH (process.py) dan jalur STREAMING
 (stream.py) sehingga fitur yang dilihat model saat training dan saat
 scoring identik (mencegah training-serving skew).
+
+Helper jalur analisis (stratified_split, evaluate_binary, importance_table, save_metrics, ...)
+dipakai oleh src/*_pipeline.py dan synthesis.py supaya split, metrik dan format keluaran sama untuk
+setiap platform. Semua path diambil dari `paths` di config.yaml.
 """
+import json
+import os
 import re
+from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import yaml
 from pyspark.sql import DataFrame, SparkSession
@@ -35,6 +44,29 @@ def report_dir(cfg: dict, ds_key: str) -> Path:
     return d
 
 
+def landing_path(key: str, cfg: dict | None = None) -> Path:
+    """Folder landing satu dataset, data/landing/<key>/ (diisi scripts/download_datasets.py).
+    Dibaca oleh kedua jalur: pipeline Rafi (ingest.py) dan pipeline analisis."""
+    return path_of(cfg or load_config(), "landing", key)
+
+
+# ---- Zona jalur analisis (src/*_pipeline.py, synthesis.py), diambil dari config.yaml `paths`.
+# Sengaja terpisah dari data/bronze|silver|gold/<key> supaya tidak menimpa keluaran pipeline Rafi.
+_PATHS = load_config()["paths"]
+PROJECT_ROOT = ROOT
+DATA_LANDING = ROOT / _PATHS["landing"]
+DATA_CURATED = ROOT / _PATHS["curated"]
+OUTPUTS = ROOT / _PATHS["outputs"]
+OUT_METRICS = OUTPUTS / "metrics"          # ringkasan per track (JSON, tanpa data per-akun)
+OUT_FIGURES = OUTPUTS / "figures"
+OUT_MODELS = OUTPUTS / "models"
+OUT_PREDICTIONS = OUTPUTS / "predictions"  # skor per akun -> .gitignore
+OUT_POWERBI = OUTPUTS / "powerbi"          # ekspor CSV Power BI -> .gitignore
+
+for _d in (DATA_CURATED, OUT_METRICS, OUT_FIGURES, OUT_MODELS, OUT_PREDICTIONS):
+    _d.mkdir(parents=True, exist_ok=True)
+
+
 def snake(name: str) -> str:
     # '#' di awal nama berarti "jumlah" dan dipertahankan sebagai 'n_': '#tags/post' -> 'n_tags_post'.
     # Tanpa ini '#tags/post' dan 'tags/post' (keduanya ada di dataset Facebook) sama-sama menjadi
@@ -62,15 +94,229 @@ def snake_all(names) -> list:
     return out
 
 
-def get_spark(name: str = "bigdata-bot-detection") -> SparkSession:
-    spark = (SparkSession.builder.master("local[*]").appName(name)
-             .config("spark.driver.memory", "2g")
+def spark_master(cores=None) -> str:
+    """'local[*]' (semua core) bila cores=None, selain itu 'local[<cores>]'."""
+    return "local[*]" if cores is None else f"local[{int(cores)}]"
+
+
+def get_spark(name: str = "bigdata-bot-detection", driver_memory: str = "2g", cores=None) -> SparkSession:
+    """SparkSession lokal untuk semua skrip di src/.
+
+    Dua gaya pemanggilan sama-sama didukung:
+      get_spark("ingest")                                   # pipeline batch/streaming
+      get_spark("twitter_pipeline", driver_memory="2g", cores=3)   # pipeline analisis
+    cores=None memakai semua core (local[*]). Jalur analisis menyebut cores secara eksplisit karena
+    jumlah partisi ikut menentukan hasil split acak ber-seed (sampleBy).
+    Java diambil dari lingkungan (JAVA_HOME / java di PATH); tidak ada path yang di-hard-code.
+    """
+    spark = (SparkSession.builder.master(spark_master(cores)).appName(name)
+             .config("spark.driver.memory", driver_memory)
              .config("spark.sql.shuffle.partitions", "8")
              .config("spark.ui.enabled", "false")
+             .config("spark.ui.showConsoleProgress", "false")
              .config("spark.sql.session.timeZone", "UTC")
              .getOrCreate())
     spark.sparkContext.setLogLevel("ERROR")
     return spark
+
+
+# ---- Jalur analisis: split, nama fitur, evaluasi, keluaran ---------------------------------
+# Sama untuk setiap track agar metrik dan split dapat dibandingkan lintas platform.
+RANDOM_SEED = 42
+TEST_FRACTION = 0.20
+
+
+def stratified_split(df, label_col: str = "label",
+                     test_fraction: float = TEST_FRACTION,
+                     seed: int = RANDOM_SEED):
+    """Stratified train/test split that preserves duplicate rows.
+
+    Uses an anti-join on a surrogate row id rather than DataFrame.subtract(),
+    because subtract() de-duplicates and would silently drop repeated rows.
+    """
+    tagged = df.withColumn("_row_id", F.monotonically_increasing_id()).cache()
+    labels = [r[0] for r in tagged.select(label_col).distinct().collect()]
+    fractions = {lab: 1.0 - test_fraction for lab in labels}
+
+    train = tagged.sampleBy(label_col, fractions=fractions, seed=seed).cache()
+    test = tagged.join(train.select("_row_id"), on="_row_id", how="left_anti")
+    return train.drop("_row_id"), test.drop("_row_id")
+
+
+def assembled_feature_names(df, features_col: str = "features") -> list[str]:
+    """Recover column names from a VectorAssembler output, in vector order.
+
+    Handles one-hot / indexed expansions, which a plain inputCols list does not.
+    """
+    attrs = df.schema[features_col].metadata["ml_attr"]["attrs"]
+    indexed = []
+    for kind in ("numeric", "binary", "nominal"):
+        for a in attrs.get(kind, []):
+            indexed.append((a["idx"], a["name"]))
+    return [name for _, name in sorted(indexed)]
+
+
+def evaluate_binary(predictions, label_col: str = "label",
+                    pred_col: str = "prediction",
+                    prob_col: str = "probability") -> dict:
+    """Full binary metric set for one fitted model's test predictions.
+
+    Positive class (1) is the inauthentic / bot / spam class.
+    Accuracy alone is never enough here, so precision, recall, F1,
+    balanced accuracy, MCC and both AUCs are always reported, together
+    with the majority-class baseline to compare against.
+    """
+    import math
+    from pyspark.ml.evaluation import BinaryClassificationEvaluator
+
+    rows = predictions.groupBy(label_col, pred_col).count().collect()
+    counts = {(int(r[label_col]), int(r[pred_col])): r["count"] for r in rows}
+    tp = counts.get((1, 1), 0)
+    fp = counts.get((0, 1), 0)
+    tn = counts.get((0, 0), 0)
+    fn = counts.get((1, 0), 0)
+    n = tp + fp + tn + fn
+
+    def _safe(num, den):
+        return float(num) / den if den else 0.0
+
+    precision = _safe(tp, tp + fp)
+    recall = _safe(tp, tp + fn)
+    specificity = _safe(tn, tn + fp)
+    f1 = _safe(2 * precision * recall, precision + recall)
+
+    mcc_den = math.sqrt(float(tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    mcc = ((tp * tn) - (fp * fn)) / mcc_den if mcc_den else 0.0
+
+    out = {
+        "confusion_matrix": {
+            "true_negative": tn, "false_positive": fp,
+            "false_negative": fn, "true_positive": tp,
+        },
+        "n_test": n,
+        "accuracy": round(_safe(tp + tn, n), 4),
+        "precision_positive": round(precision, 4),
+        "recall_positive": round(recall, 4),
+        "f1_positive": round(f1, 4),
+        "specificity": round(specificity, 4),
+        "balanced_accuracy": round((recall + specificity) / 2, 4),
+        "mcc": round(mcc, 4),
+    }
+
+    if prob_col and prob_col in predictions.columns:
+        for metric, key in (("areaUnderROC", "roc_auc"), ("areaUnderPR", "pr_auc")):
+            ev = BinaryClassificationEvaluator(
+                labelCol=label_col, rawPredictionCol=prob_col, metricName=metric)
+            out[key] = round(ev.evaluate(predictions), 4)
+
+    # Majority-class baseline: what you would score by always predicting
+    # the larger class. Any model must clearly beat this to mean anything.
+    n_pos = tp + fn
+    n_neg = tn + fp
+    majority_acc = _safe(max(n_pos, n_neg), n)
+    out["baseline_majority_class"] = {
+        "predicts": 1 if n_pos >= n_neg else 0,
+        "accuracy": round(majority_acc, 4),
+        "accuracy_lift_of_model": round(out["accuracy"] - majority_acc, 4),
+    }
+    return out
+
+
+def importance_table(model, feature_names: list[str], top_n: int | None = None) -> list[dict]:
+    """Rank features for a fitted RandomForest or LogisticRegression stage."""
+    if hasattr(model, "featureImportances"):
+        vals = model.featureImportances.toArray()
+        key = "importance"
+    elif hasattr(model, "coefficients"):
+        vals = model.coefficients.toArray()
+        key = "coefficient"
+    else:
+        raise TypeError(f"no importances or coefficients on {type(model).__name__}")
+
+    rows = [{"feature": n, key: round(float(v), 6)}
+            for n, v in zip(feature_names, vals)]
+    rows.sort(key=lambda r: abs(r[key]), reverse=True)
+    for i, r in enumerate(rows, 1):
+        r["rank"] = i
+    return rows[:top_n] if top_n else rows
+
+
+def save_metrics(payload: dict, track: str) -> Path:
+    """Write one track's result bundle to outputs/metrics/<track>.json."""
+    payload = dict(payload)
+    payload["_generated_at"] = datetime.now(timezone.utc).isoformat()
+    payload["_track"] = track
+    path = OUT_METRICS / f"{track}.json"
+    path.write_text(json.dumps(payload, indent=2, default=str))
+    return path
+
+
+def save_predictions(sdf, track: str, columns: list[str] | None = None) -> Path:
+    """Write per-account scores as a single CSV for MongoDB / Power BI loading."""
+    import pandas as pd  # noqa: F401
+    pdf = (sdf.select(*columns) if columns else sdf).toPandas()
+    path = OUT_PREDICTIONS / f"{track}_scored.csv"
+    pdf.to_csv(path, index=False)
+    return path
+
+
+# ---- MongoDB (lapisan penyajian) --------------------------------------------------------------
+DEFAULT_MONGO_DB = "socmed_bot_detection"
+
+
+def load_env(path=None) -> dict:
+    """Baca file .env sederhana (KEY=VALUE per baris, '#' = komentar) ke os.environ.
+
+    Variabel yang sudah di-set di lingkungan TIDAK ditimpa. File yang tidak ada diabaikan.
+    Mengembalikan nama-nama variabel yang dibaca (tanpa nilainya)."""
+    p = Path(path) if path else ROOT / ".env"
+    names = []
+    if p.exists():
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip().removeprefix("export ").strip()
+            os.environ.setdefault(k, v.strip().strip('"').strip("'"))
+            names.append(k)
+    return names
+
+
+def mongo_uri(env=None) -> str:
+    """MONGO_URI bila ada; jika tidak, dirakit dari MONGO_INITDB_ROOT_USERNAME/PASSWORD +
+    MONGO_HOST/MONGO_PORT (default 127.0.0.1:27017); tanpa user = koneksi tanpa autentikasi."""
+    env = os.environ if env is None else env
+    if env.get("MONGO_URI"):
+        return env["MONGO_URI"]
+    host, port = env.get("MONGO_HOST", "127.0.0.1"), env.get("MONGO_PORT", "27017")
+    user, pw = env.get("MONGO_INITDB_ROOT_USERNAME"), env.get("MONGO_INITDB_ROOT_PASSWORD")
+    if user and pw:
+        return f"mongodb://{quote_plus(user)}:{quote_plus(pw)}@{host}:{port}/?authSource=admin"
+    return f"mongodb://{host}:{port}/"
+
+
+def redact_uri(uri: str) -> str:
+    """Sembunyikan password di connection string sebelum dicetak/disimpan."""
+    scheme, sep, rest = uri.partition("://")
+    authority, slash, tail = rest.partition("/")
+    creds, at, host = authority.rpartition("@")
+    if not (sep and at and ":" in creds):
+        return uri
+    return f"{scheme}://{creds.split(':', 1)[0]}:<password>@{host}{slash}{tail}"
+
+
+def get_mongo(timeout_ms: int = 5000):
+    """Kembalikan (client, db) MongoDB dari MONGO_URI dan MONGO_DB (file .env di root repo ikut dibaca).
+
+    pymongo di-import di sini saja, sehingga skrip yang tidak memakai MongoDB tidak butuh pymongo.
+    MongoClient baru benar-benar terhubung saat perintah pertama; panggil
+    client.admin.command("ping") untuk memeriksa koneksi."""
+    load_env()
+    from pymongo import MongoClient
+
+    client = MongoClient(mongo_uri(), serverSelectionTimeoutMS=timeout_ms)
+    return client, client[os.environ.get("MONGO_DB", DEFAULT_MONGO_DB)]
 
 
 def detect_label(columns, configured=None):

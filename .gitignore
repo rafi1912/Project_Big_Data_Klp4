@@ -29,3 +29,9 @@ metastore_db/
 spark-warehouse/
 *.log
 .DS_Store
+
+# Keluaran jalur analisis yang berisi data per-akun (tidak pernah di-commit)
+outputs/predictions/
+outputs/powerbi/
+outputs/models/
+outputs/logs/
