@@ -21,10 +21,11 @@ author aggregation. The author table (~6.7k rows) is then small, so the null-mod
 simulation, the robust z-scores, the IsolationForest (Spark MLlib has none),
 the figures and the CSV are done in pandas / numpy / scikit-learn.
 
-Run from a clean shell:
-    cd ~/analysis/socmed-bot-detection
-    source .venv/bin/activate
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Input: data/landing/tiktok_videos/tiktok_merged_data_deduplicated.csv (config.yaml
+`unlabelled_datasets`, downloaded by scripts/download_datasets.py). Section 6 also
+reads the labelled platforms' landing files and outputs/metrics/*.json if present.
+
+Run from the repo root (Java 17 on PATH or JAVA_HOME set):
     python src/tiktok_pipeline.py
 """
 from __future__ import annotations
@@ -42,7 +43,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 
 TRACK = "tiktok"
-RAW_PATH = common.DATA_RAW / "tiktok" / "tiktok_merged_data_deduplicated.csv"
+RAW_PATH = common.landing_path("tiktok_videos") / "tiktok_merged_data_deduplicated.csv"
 SEED = common.RANDOM_SEED
 
 # ---------------------------------------------------------------------------
@@ -905,14 +906,14 @@ def empirical_scales() -> dict:
     """Compare value ranges of nominally matched features (read-only on raw files)."""
     out = {}
     try:
-        fb = pd.read_csv(common.DATA_RAW / "facebook" / "Facebook Spam Dataset.csv")
+        fb = pd.read_csv(common.landing_path("facebook_spam") / "Facebook Spam Dataset.csv")
         for col in ("avgcomment/post", "likes/post", "tags/post", "#tags/post", "#postshared"):
             s = pd.to_numeric(fb[col], errors="coerce").dropna()
             out[f"facebook::{col}"] = {"median": r4(s.median()), "p95": r4(s.quantile(.95)), "max": r4(s.max())}
     except Exception as e:  # noqa: BLE001
         out["facebook_error"] = str(e)
     try:
-        tw = pd.read_csv(common.DATA_RAW / "twitter" / "bot_detection_data.csv",
+        tw = pd.read_csv(common.landing_path("twitter_bot_detection") / "bot_detection_data.csv",
                          usecols=["User ID", "Retweet Count", "Mention Count", "Hashtags"])
         out["twitter::rows_per_user_id"] = r4(len(tw) / tw["User ID"].nunique())
         for col in ("Retweet Count", "Mention Count"):
@@ -924,7 +925,7 @@ def empirical_scales() -> dict:
     except Exception as e:  # noqa: BLE001
         out["twitter_error"] = str(e)
     try:
-        ig = pd.read_csv(common.DATA_RAW / "instagram" / "train.csv")
+        ig = pd.read_csv(common.landing_path("instagram_fake_spammer") / "train.csv")
         for col in ("#posts", "description length"):
             s = ig[col]
             out[f"instagram::{col}"] = {"median": r4(s.median()), "p95": r4(s.quantile(.95)), "max": r4(s.max())}
@@ -1306,7 +1307,8 @@ def main():
     from scipy.stats import spearmanr
 
     rng = np.random.default_rng(SEED)
-    spark = common.get_spark("tiktok_pipeline")  # defaults: 2g driver, 3 cores (contract limits)
+    # cores=3 as in the reference run (the old analysis default), so partitioning is unchanged.
+    spark = common.get_spark("tiktok_pipeline", driver_memory="2g", cores=3)
     spark.conf.set("spark.sql.session.timeZone", "UTC")  # treat naive timestamps literally, no DST shifts
     try:
         raw, v = load_videos(spark)
