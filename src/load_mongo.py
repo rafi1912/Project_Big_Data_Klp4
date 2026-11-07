@@ -14,7 +14,8 @@ Satu dokumen per baris; setiap dokumen membawa field `dataset` (= kunci di confi
   pipeline_test_predictions    data/gold/<ds>/test_predictions.parquet
 
 Idempoten: dokumen lama dataset yang sama dihapus lalu ditulis ulang. Skor streaming
-(`stream_scores`) ditulis langsung oleh stream.py.
+(`stream_scores`) ditulis langsung oleh stream.py. Pemuatan ini juga menghapus penanda database demo
+(`meta`/`demo_seed`, ditulis scripts/seed_demo.py), karena isinya sekarang hasil run sungguhan.
 
   python load_mongo.py                    # semua dataset yang sudah punya hasil
   python load_mongo.py facebook_spam      # satu dataset
@@ -38,6 +39,8 @@ GOLD_FILES = {"pipeline_roc": "roc.csv", "pipeline_feature_importance": "feature
               "pipeline_monthly_counts": "monthly_counts.csv", "pipeline_eda_sample": "eda_sample.parquet",
               "pipeline_test_predictions": "test_predictions.parquet"}
 EDA_DROP = ["record_id", "username_ref"]   # grafik EDA tidak butuh identitas akun
+META_COLLECTION = "meta"
+DEMO_MARKER_ID = "demo_seed"               # ditulis scripts/seed_demo.py; dashboard menampilkan banner demo
 
 
 def clean(v):
@@ -98,6 +101,15 @@ def write_dataset(db, key: str, docs: dict) -> dict:
     return counts
 
 
+def clear_demo_marker(db) -> bool:
+    """Hapus penanda database demo beserta baris account_scores demo. Dipanggil oleh pemuat run lengkap
+    (load_mongo.py dan synthesis.py). True bila penanda tadinya ada."""
+    removed = db[META_COLLECTION].delete_one({"_id": DEMO_MARKER_ID}).deleted_count
+    if removed:
+        db["account_scores"].delete_many({"dataset_role": "demo_synthetic"})
+    return bool(removed)
+
+
 def ensure_indexes(db):
     for coll in COLLECTIONS:
         db[coll].create_index("dataset")
@@ -119,6 +131,8 @@ def main(only=None):
     cfg = common.load_config()
     client, db = connect()
     ensure_indexes(db)
+    if clear_demo_marker(db):
+        print("[load_mongo] penanda demo dihapus: database ini sekarang memuat hasil run lengkap")
     for key in cfg["datasets"]:
         if only and key != only:
             continue

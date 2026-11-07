@@ -154,6 +154,11 @@ cadangan berupa file).
 Yang hanya muncul setelah **run lengkap**: hasil batch dataset nyata (Treiman, Instagram, Facebook),
 antrean moderator untuk akun nyata (X, Instagram, Facebook, TikTok) dan skor streaming dataset lain.
 
+Database demo diberi penanda (koleksi `meta`, dokumen `demo_seed`): selama penanda itu ada, **setiap
+halaman diawali banner "Mode demo"** dan hitungan 100.000 baris di halaman Arsitektur disebut sebagai
+hitungan data demo, bukan sistem lengkap. `src/load_mongo.py` (langkah terakhir `run_all.sh`) dan
+`src/synthesis.py` menghapus penanda itu (beserta akun demo di `account_scores`) saat memuat hasil run lengkap.
+
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
 - **konfigurasi & skema**: `load_config`, `path_of`, `landing_path`, `report_dir`, `snake`/`snake_all`,

@@ -77,6 +77,14 @@ def test_every_page_renders_from_mongodb(demo_db, page):
     assert not at.exception, [e.value for e in at.exception]
     assert at.title and at.title[0].value
     assert not any("MongoDB tidak dapat dihubungi" in e.value for e in at.error)
+    # database demo: banner "Mode demo" adalah elemen info pertama di setiap halaman
+    assert at.info and at.info[0].value.startswith("**Mode demo**")
+    assert "scripts/seed_demo.py" in at.info[0].value
+
+
+def test_demo_row_count_is_labelled_as_demo_only(demo_db):
+    texts = [i.value for i in _run("Arsitektur & Data Lake").info]
+    assert any("hanya menghitung data demo" in t and "bukan** sistem lengkap" in t for t in texts)
 
 
 def test_unreachable_mongodb_stops_with_start_command(demo_db, monkeypatch):
@@ -85,3 +93,21 @@ def test_unreachable_mongodb_stops_with_start_command(demo_db, monkeypatch):
     assert not at.exception
     assert len(at.error) == 1 and "docker compose -f deploy/mongodb/docker-compose.yml" in at.error[0].value
     assert not at.title                          # berhenti: tidak ada halaman yang digambar dari file
+
+
+def test_full_load_removes_the_demo_banner(demo_db):
+    """Pemuat run lengkap (load_mongo.py, dipanggil run_all.sh) menghapus penanda demo. Harus test terakhir:
+    database sementara ini tidak lagi berstatus demo sesudahnya."""
+    import load_mongo
+    from pymongo import MongoClient
+
+    db = MongoClient(common.mongo_uri(), serverSelectionTimeoutMS=1500)[TEST_DB]
+    assert db[load_mongo.META_COLLECTION].count_documents({"_id": load_mongo.DEMO_MARKER_ID}) == 1
+    load_mongo.main("twitter_bot_detection")                       # pemuatan sungguhan, bukan simulasi
+    assert db[load_mongo.META_COLLECTION].count_documents({}) == 0
+    assert db["account_scores"].count_documents({"dataset_role": "demo_synthetic"}) == 0
+    at = _run("Arsitektur & Data Lake")
+    assert not at.exception
+    assert not any("Mode demo" in i.value for i in at.info)
+    assert any("Total baris seluruh sumber berlabel" in w.value for w in [*at.warning, *at.success])
+    db.client.close()

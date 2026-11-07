@@ -5,6 +5,7 @@ Dashboard HANYA membaca MongoDB (Spark -> MongoDB -> dashboard). Isinya ditulis 
 src/load_mongo.py (hasil ingest/process/train, dipanggil run_all.sh), src/stream.py (skor streaming),
 src/synthesis.py (level risiko & perbandingan lintas platform), atau scripts/seed_demo.py (demo).
 Tidak ada cadangan berupa file: bila MongoDB tidak terjangkau, halaman berhenti dengan instruksi.
+Database yang diisi seed_demo.py bertanda `meta`/`demo_seed`: setiap halaman lalu diawali banner "Mode demo".
 """
 import sys
 import time
@@ -18,6 +19,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 import common  # noqa: E402
+from load_mongo import DEMO_MARKER_ID, META_COLLECTION  # noqa: E402
 
 START_CMD = "docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d"
 PAGES = ["Arsitektur & Data Lake", "Kualitas Data", "EDA", "Model & Evaluasi", "Streaming (simulasi)",
@@ -43,6 +45,17 @@ except Exception as e:                    # noqa: BLE001 - pesan apa pun, tangga
              "lalu isi datanya: `python scripts/seed_demo.py` (demo tanpa Kaggle) atau jalur lengkap "
              "(`bash run_all.sh`, pipeline analisis, `python src/synthesis.py`).")
     st.stop()
+
+
+demo = db[META_COLLECTION].find_one({"_id": DEMO_MARKER_ID})
+if demo:                                  # banner di atas SETIAP halaman selama database berisi data demo
+    when = demo.get("seeded_at")
+    st.info("**Mode demo** — isi MongoDB ini berasal dari `scripts/seed_demo.py`"
+            + (f" (diisi {when:%Y-%m-%d %H:%M} UTC)" if when else "")
+            + ": hanya dataset **sintetis** `twitter_bot_detection` (username buatan Faker) dan **agregat hasil "
+            "analisis tanpa identitas akun**. Hasil batch dataset nyata, antrean moderator untuk akun nyata, dan "
+            "skor streaming dataset lain baru muncul setelah run lengkap: `python scripts/download_datasets.py` → "
+            "`bash run_all.sh` → pipeline analisis (`src/*_pipeline.py`) → `python src/synthesis.py` (lihat README).")
 
 
 def find(coll, query=None, sort=None, limit=0) -> pd.DataFrame:
@@ -113,10 +126,15 @@ if page == "Arsitektur & Data Lake":
     st.dataframe(t, width="stretch", hide_index=True)
     total = int(t["baris"].sum())
     ok = total >= 100_000
-    (st.success if ok else st.warning)(
-        f"Total baris seluruh sumber berlabel: **{total:,}** — "
-        + ("memenuhi syarat minimum 100.000 baris." if ok else
-           "**belum** memenuhi syarat minimum 100.000 baris; tambahkan dataset (lihat README)."))
+    if demo:
+        st.info(f"Total baris **data demo**: **{total:,}** — angka ini hanya menghitung data demo (dataset "
+                "sintetis `twitter_bot_detection`), **bukan** sistem lengkap. Syarat minimum 100.000 baris dinilai "
+                "dari run lengkap (lihat README, bagian *Syarat 100.000 baris*).")
+    else:
+        (st.success if ok else st.warning)(
+            f"Total baris seluruh sumber berlabel: **{total:,}** — "
+            + ("memenuhi syarat minimum 100.000 baris." if ok else
+               "**belum** memenuhi syarat minimum 100.000 baris; tambahkan dataset (lihat README)."))
     st.subheader("Isi MongoDB")
     counts = pd.DataFrame([{"koleksi": c, "dokumen": db[c].estimated_document_count()}
                            for c in sorted(db.list_collection_names())])

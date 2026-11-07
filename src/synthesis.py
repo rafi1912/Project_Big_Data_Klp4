@@ -1452,6 +1452,9 @@ def load_mongo(spark, acc_sdf, side, metrics, payload_extra, use_connector):
     client = MongoClient(uri, serverSelectionTimeoutMS=8000)
     client.admin.command("ping")
     db = client[dbname]
+    import load_mongo as pipeline_loader  # src/load_mongo.py: the demo marker lives there
+    if pipeline_loader.clear_demo_marker(db):
+        log("  demo marker removed: this database now holds a full run")
     write_path = None
     if use_connector:
         try:

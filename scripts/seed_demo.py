@@ -11,6 +11,8 @@ Yang dimuat — semuanya sudah ada di repo dan TIDAK berisi identitas akun nyata
 
 Yang TIDAK ada di demo: hasil pipeline batch untuk dataset nyata, antrean moderator untuk akun nyata,
 dan skor streaming selain dataset sintetis. Itu hanya muncul setelah run lengkap (lihat README).
+Database diberi penanda (`meta`/`demo_seed`) sehingga dashboard menampilkan banner "Mode demo" di setiap
+halaman; src/load_mongo.py dan src/synthesis.py menghapus penanda itu saat memuat hasil run lengkap.
 
   python scripts/seed_demo.py            # database harus kosong
   python scripts/seed_demo.py --reset    # HAPUS seluruh database MONGO_DB lalu isi demo
@@ -18,6 +20,7 @@ dan skor streaming selain dataset sintetis. Itu hanya muncul setelah run lengkap
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
@@ -30,6 +33,11 @@ import load_mongo  # noqa: E402
 
 DEMO_KEY = "twitter_bot_detection"
 SNAPSHOT = ROOT / "demo" / "analysis_aggregates.json"
+DEMO_CONTENTS = [
+    "hasil batch + skor streaming dataset sintetis twitter_bot_detection (username buatan Faker)",
+    "agregat hasil analisis tanpa identitas akun (demo/analysis_aggregates.json)",
+    "account_scores demo: akun uji sintetis, semuanya NA karena evidence gate gagal",
+]
 
 
 def demo_levels(y: np.ndarray, s: np.ndarray) -> tuple[np.ndarray, dict]:
@@ -75,6 +83,15 @@ def demo_accounts(pred: pd.DataFrame) -> tuple[list, dict]:
     return docs, gate
 
 
+def write_demo_marker(db):
+    """Tandai database sebagai demo; dashboard lalu menampilkan banner di setiap halaman. Pemuat run
+    lengkap (src/load_mongo.py, src/synthesis.py) menghapus penanda ini."""
+    db[load_mongo.META_COLLECTION].replace_one(
+        {"_id": load_mongo.DEMO_MARKER_ID},
+        {"_id": load_mongo.DEMO_MARKER_ID, "mode": "demo", "seeded_at": datetime.now(timezone.utc),
+         "seeded_by": "scripts/seed_demo.py", "contains": DEMO_CONTENTS}, upsert=True)
+
+
 def seed(db) -> dict:
     """Isi `db` (dianggap kosong) dengan seluruh data demo. Mengembalikan jumlah dokumen per koleksi."""
     cfg = common.load_config()
@@ -95,6 +112,7 @@ def seed(db) -> dict:
     db["account_scores"].insert_many(docs)
     db["account_scores"].create_index([("dataset", 1), ("rf_p_inauthentic", -1)])
     counts["account_scores"] = len(docs)
+    write_demo_marker(db)
     counts["_demo_evidence_gate"] = gate
     return counts
 
