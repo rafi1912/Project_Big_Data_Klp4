@@ -53,6 +53,12 @@ dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashbo
   ```bash
   rm -rf data/bronze data/silver reports/*/ingest_manifest.json && bash run_all.sh
   ```
+- **Kolom identitas tidak lagi menjadi fitur**: `facebook_spam` (`profile id`) dan
+  `twitter_human_bots` (`c0` = indeks baris tanpa nama, `split` = pembagian buatan penyusun dataset).
+  Bronze tidak berubah; cukup ulangi processing dan training:
+  ```bash
+  cd src && python process.py && python train.py
+  ```
 
 ## Environment variables
 | Variabel | Wajib? | Dipakai oleh | Keterangan |
@@ -75,7 +81,8 @@ Alur kerja tim (branch, PR, review, merge) ada di [CONTRIBUTING.md](CONTRIBUTING
 Pipeline berjalan penuh (ingest → process → train → streaming 3 micro-batch → 6 halaman dashboard tanpa error).
 Namun **model tidak menemukan sinyal**: ROC-AUC uji ≈ 0,50 pada ketiga algoritma, akurasi 0,498 vs baseline 0,500.
 Penyebab ada di data, bukan di kode: tweet berupa kalimat acak, distribusi fitur seragam, rata-rata fitur
-identik antara bot dan bukan-bot → dataset ini hampir pasti **sintetis**. Jangan melaporkannya sebagai "akurasi deteksi".
+identik antara bot dan bukan-bot → dataset ini **sintetis**: kosakata kolom `Tweet` persis 971 kata daftar
+`lorem` milik library Faker. Dataset ini dipertahankan sebagai **kontrol negatif**. Jangan melaporkannya sebagai "akurasi deteksi".
 Dashboard menampilkan peringatan ini secara otomatis. Pipeline yang sama diuji pada fixture berlabel
 yang SENGAJA diberi sinyal (hanya untuk uji kode, sudah dihapus) → AUC ≈ 0,97, jadi kode memang bisa belajar bila datanya punya sinyal.
 
@@ -86,5 +93,8 @@ Arsitektur & Data Lake) menghitung total otomatis. Tambahkan sumber berlabel yan
 
 ## Keterbatasan
 - Dataset diproses terpisah per platform; label bot/spam/fake belum tentu sepadan antar-platform.
+- `facebook_spam` berisi 497 profil label 0 dan 103 label 1 (bukan 500/100 seperti kartu Kaggle) yang
+  tersusun **dua blok berurutan menurut label**. Akurasi tinggi pada dataset ini terutama mencerminkan
+  blok file, bukan perilaku spam; laporkan sebagai kasus peringatan, bukan kemampuan deteksi.
 - Streaming memutar ulang akun dari data uji (held-out) lewat file; produksi memakai Kafka.
 - Skor model = sinyal bantu untuk review manusia, bukan dasar tunggal untuk menghukum akun.

@@ -26,14 +26,18 @@ datasets:
     text_columns: [Tweet]
     hashtag_columns: [Hashtags]
     datetime_columns: [Created At]
-    note: "50.000 baris, kemungkinan sintetis (tweet acak, distribusi seragam)."
+    note: >-
+      50.000 baris, TERBUKTI sintetis: kosakata kolom Tweet persis 971 kata daftar `lorem` Faker
+      (en_US). Dipertahankan sebagai kontrol negatif: model yang jujur harus mendapat ROC-AUC ~0,5.
 
   twitter_human_bots:
     platform: Twitter/X
     kaggle: danieltreiman/twitter-human-bots-dataset    # verifikasi slug di Kaggle
     label_column: account_type
     positive_values: [bot]
-    id_columns: [id, screen_name]
+    # c0 = indeks baris tanpa nama (kolom pertama CSV), split = pembagian 0/1/2 buatan penyusun
+    # dataset. Keduanya bukan perilaku akun, jadi tidak boleh menjadi fitur.
+    id_columns: [id, screen_name, c0, split]
     text_columns: [description]
     hashtag_columns: []
     datetime_columns: []
@@ -42,7 +46,7 @@ datasets:
   instagram_fake_spammer:
     platform: Instagram
     kaggle: free4ever1/instagram-fake-spammer-genuine-accounts
-    label_column: null          # null = deteksi otomatis; isi manual bila gagal
+    label_column: fake          # header asli train.csv/test.csv (0 = asli, 1 = palsu/spammer)
     positive_values: null       # null = default (1/true/bot/fake/spam/spammer)
     id_columns: []
     text_columns: []
@@ -53,13 +57,16 @@ datasets:
   facebook_spam:
     platform: Facebook
     kaggle: khajahussainsk/facebook-spam-dataset
-    label_column: null
+    label_column: Label
     positive_values: [1]
-    id_columns: []
+    id_columns: [profile id]    # nomor urut profil; berkorelasi dgn label karena file urut per kelas
     text_columns: []
     hashtag_columns: []
     datetime_columns: []
-    note: "600 profil (500 legit, 100 spam), 13 fitur."
+    note: >-
+      600 profil: 497 label 0 / 103 label 1 (bukan 500/100 seperti kartu Kaggle), 13 fitur.
+      PERINGATAN: file tersusun dua blok menurut label (legit dulu, lalu spam), jadi akurasi tinggi
+      di sini terutama mempelajari blok file, bukan perilaku spam. Kasus peringatan, bukan hasil utama.
 
 modeling:
   seed: 42
