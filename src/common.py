@@ -62,11 +62,26 @@ def snake_all(names) -> list:
     return out
 
 
-def get_spark(name: str = "bigdata-bot-detection") -> SparkSession:
-    spark = (SparkSession.builder.master("local[*]").appName(name)
-             .config("spark.driver.memory", "2g")
+def spark_master(cores=None) -> str:
+    """'local[*]' (semua core) bila cores=None, selain itu 'local[<cores>]'."""
+    return "local[*]" if cores is None else f"local[{int(cores)}]"
+
+
+def get_spark(name: str = "bigdata-bot-detection", driver_memory: str = "2g", cores=None) -> SparkSession:
+    """SparkSession lokal untuk semua skrip di src/.
+
+    Dua gaya pemanggilan sama-sama didukung:
+      get_spark("ingest")                                   # pipeline batch/streaming
+      get_spark("twitter_pipeline", driver_memory="2g", cores=3)   # pipeline analisis
+    cores=None memakai semua core (local[*]). Jalur analisis menyebut cores secara eksplisit karena
+    jumlah partisi ikut menentukan hasil split acak ber-seed (sampleBy).
+    Java diambil dari lingkungan (JAVA_HOME / java di PATH); tidak ada path yang di-hard-code.
+    """
+    spark = (SparkSession.builder.master(spark_master(cores)).appName(name)
+             .config("spark.driver.memory", driver_memory)
              .config("spark.sql.shuffle.partitions", "8")
              .config("spark.ui.enabled", "false")
+             .config("spark.ui.showConsoleProgress", "false")
              .config("spark.sql.session.timeZone", "UTC")
              .getOrCreate())
     spark.sparkContext.setLogLevel("ERROR")
