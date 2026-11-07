@@ -10,8 +10,10 @@ paths:
   bronze: data/bronze
   silver: data/silver
   gold: data/gold
+  curated: data/curated          # zona curated jalur analisis (terpisah dari bronze/silver/gold)
   models: models
   reports: reports
+  outputs: outputs               # metrik, gambar, prediksi, ekspor Power BI jalur analisis
   stream_in: data/stream/incoming
   stream_out: data/gold/stream_scores
   checkpoint: data/stream/_checkpoint
