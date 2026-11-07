@@ -5,9 +5,11 @@
 scoring identik (mencegah training-serving skew).
 """
 import json
+import os
 import re
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import yaml
 from pyspark.sql import DataFrame, SparkSession
@@ -251,6 +253,65 @@ def save_predictions(sdf, track: str, columns: list[str] | None = None) -> Path:
     path = OUT_PREDICTIONS / f"{track}_scored.csv"
     pdf.to_csv(path, index=False)
     return path
+
+
+# ---- MongoDB (lapisan penyajian) --------------------------------------------------------------
+DEFAULT_MONGO_DB = "socmed_bot_detection"
+
+
+def load_env(path=None) -> dict:
+    """Baca file .env sederhana (KEY=VALUE per baris, '#' = komentar) ke os.environ.
+
+    Variabel yang sudah di-set di lingkungan TIDAK ditimpa. File yang tidak ada diabaikan.
+    Mengembalikan nama-nama variabel yang dibaca (tanpa nilainya)."""
+    p = Path(path) if path else ROOT / ".env"
+    names = []
+    if p.exists():
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            k = k.strip().removeprefix("export ").strip()
+            os.environ.setdefault(k, v.strip().strip('"').strip("'"))
+            names.append(k)
+    return names
+
+
+def mongo_uri(env=None) -> str:
+    """MONGO_URI bila ada; jika tidak, dirakit dari MONGO_INITDB_ROOT_USERNAME/PASSWORD +
+    MONGO_HOST/MONGO_PORT (default 127.0.0.1:27017); tanpa user = koneksi tanpa autentikasi."""
+    env = os.environ if env is None else env
+    if env.get("MONGO_URI"):
+        return env["MONGO_URI"]
+    host, port = env.get("MONGO_HOST", "127.0.0.1"), env.get("MONGO_PORT", "27017")
+    user, pw = env.get("MONGO_INITDB_ROOT_USERNAME"), env.get("MONGO_INITDB_ROOT_PASSWORD")
+    if user and pw:
+        return f"mongodb://{quote_plus(user)}:{quote_plus(pw)}@{host}:{port}/?authSource=admin"
+    return f"mongodb://{host}:{port}/"
+
+
+def redact_uri(uri: str) -> str:
+    """Sembunyikan password di connection string sebelum dicetak/disimpan."""
+    scheme, sep, rest = uri.partition("://")
+    authority, slash, tail = rest.partition("/")
+    creds, at, host = authority.rpartition("@")
+    if not (sep and at and ":" in creds):
+        return uri
+    return f"{scheme}://{creds.split(':', 1)[0]}:<password>@{host}{slash}{tail}"
+
+
+def get_mongo(timeout_ms: int = 5000):
+    """Kembalikan (client, db) MongoDB dari MONGO_URI dan MONGO_DB (file .env di root repo ikut dibaca).
+
+    pymongo di-import di sini saja, sehingga skrip yang tidak memakai MongoDB tidak butuh pymongo.
+    MongoClient baru benar-benar terhubung saat perintah pertama; panggil
+    client.admin.command("ping") untuk memeriksa koneksi."""
+    load_env()
+    from pymongo import MongoClient
+
+    client = MongoClient(mongo_uri(), serverSelectionTimeoutMS=timeout_ms)
+    return client, client[os.environ.get("MONGO_DB", DEFAULT_MONGO_DB)]
 
 
 def detect_label(columns, configured=None):
