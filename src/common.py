@@ -36,9 +36,30 @@ def report_dir(cfg: dict, ds_key: str) -> Path:
 
 
 def snake(name: str) -> str:
-    s = re.sub(r"[^0-9a-zA-Z]+", "_", str(name).strip())
+    # '#' di awal nama berarti "jumlah" dan dipertahankan sebagai 'n_': '#tags/post' -> 'n_tags_post'.
+    # Tanpa ini '#tags/post' dan 'tags/post' (keduanya ada di dataset Facebook) sama-sama menjadi
+    # 'tags_post' dan Spark gagal dengan AMBIGUOUS_REFERENCE.
+    s = re.sub(r"^#", "n_", str(name).strip())
+    s = re.sub(r"[^0-9a-zA-Z]+", "_", s)
     s = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", s)
     return re.sub(r"_+", "_", s).strip("_").lower()
+
+
+def snake_all(names) -> list:
+    """snake() untuk seluruh kolom sekaligus, dengan jaminan hasilnya unik.
+
+    Jaring pengaman untuk dataset yang belum pernah dilihat: bila dua nama masih menjadi sama,
+    nama berikutnya diberi akhiran _1, _2, ... (nama kosong menjadi 'col')."""
+    out, used = [], set()
+    for n in names:
+        base = snake(n) or "col"
+        s, i = base, 0
+        while s in used:
+            i += 1
+            s = f"{base}_{i}"
+        used.add(s)
+        out.append(s)
+    return out
 
 
 def get_spark(name: str = "bigdata-bot-detection") -> SparkSession:
@@ -68,7 +89,7 @@ def detect_label(columns, configured=None):
 def standardize(df: DataFrame, ds: dict, keep_label: bool = True) -> DataFrame:
     """Rapikan nama kolom, petakan label -> 0/1, turunkan fitur teks/waktu,
     ubah boolean -> int, dan buang kolom identitas/teks mentah dari fitur."""
-    df = df.toDF(*[snake(c) for c in df.columns])
+    df = df.toDF(*snake_all(df.columns))
     cols = df.columns
     keep = lambda names: [snake(c) for c in (names or []) if snake(c) in cols]
     id_cols, text_cols = keep(ds.get("id_columns")), keep(ds.get("text_columns"))

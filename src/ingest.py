@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 from pyspark.sql import functions as F
 
-from common import get_spark, load_config, path_of, report_dir, snake
+from common import get_spark, load_config, path_of, report_dir, snake_all
 
 EXT = {".csv", ".tsv", ".json", ".jsonl"}
 
@@ -52,7 +52,7 @@ def main(only=None):
                 continue
             df = read_any(spark, p)
             orig_cols = df.columns
-            df = df.toDF(*[snake(c) for c in df.columns])
+            df = df.toDF(*snake_all(df.columns))
             batch_id = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
             schema_json = df.schema.json()
             n = df.count()
