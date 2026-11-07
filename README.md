@@ -72,6 +72,7 @@ ke `outputs/` (metrik JSON, gambar) serta `outputs/predictions/` (skor per akun,
 | `src/instagram_pipeline.py` | `instagram_fake_spammer` (`train.csv` + `test.csv`, digabung lalu di-split ulang) | `outputs/metrics/instagram.json`, `outputs/figures/instagram_*.png` |
 | `src/facebook_pipeline.py` | `facebook_spam` (kasus peringatan: file urut per label) | `outputs/metrics/facebook.json`, `outputs/figures/facebook_*.png` |
 | `src/tiktok_pipeline.py` | `tiktok_videos` (blok `unlabelled_datasets`, **tanpa label**) | `outputs/metrics/tiktok.json`, `outputs/figures/tiktok_*.png`; profil per author di `outputs/predictions/` |
+| `src/synthesis.py` | keluaran keempat track di atas | perbandingan lintas platform, **level risiko 0–4**, tabel per akun ke `data/curated/` + **MongoDB**, ekspor CSV Power BI ke `outputs/powerbi/` |
 
 ```bash
 python src/twitter_faker_check.py          # beberapa detik, tanpa Spark
@@ -80,6 +81,7 @@ python src/twitter_pipeline.py --dataset real
 python src/instagram_pipeline.py           # ±2 menit
 python src/facebook_pipeline.py            # ±2 menit
 python src/tiktok_pipeline.py              # ±2 menit; jalankan SETELAH track lain (membaca metriknya)
+python src/synthesis.py                    # ±3 menit; butuh MongoDB (lihat di bawah) atau --skip-mongo
 ```
 Prosedurnya sama untuk setiap dataset: split berstrata 80:20 (seed 42), bobot kelas dari data latih,
 CV 3-fold di dalam data latih, Random Forest (model utama) dan Logistic Regression (baseline), lalu
@@ -91,6 +93,34 @@ TikTok berbeda: datanya **tidak berlabel**, jadi tidak ada classifier dan tidak 
 membangun profil perilaku per author (handle diganti kunci pseudonim) dan indikator anomali tanpa
 supervisi untuk tinjauan manusia. Dataset ini ada di blok `unlabelled_datasets` di `config.yaml`:
 ikut diunduh `scripts/download_datasets.py`, tetapi tidak ikut ingest/process/train (tahap itu butuh label).
+
+## Lapisan penyajian MongoDB
+Arsitektur penyajian: **Spark → MongoDB → {dashboard Streamlit, ekspor Power BI}**. MongoDB berjalan di
+Docker, kecil (512 MB), dan hanya terbuka di loopback.
+
+```bash
+cp .env.example .env          # lalu isi user/password (jangan di-commit)
+chmod 600 .env
+docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d     # nyalakan
+docker compose -f deploy/mongodb/docker-compose.yml --env-file .env ps        # status (healthy)
+python src/synthesis.py                                                       # isi koleksi + verifikasi
+docker compose -f deploy/mongodb/docker-compose.yml --env-file .env down      # matikan (data tetap)
+docker compose -f deploy/mongodb/docker-compose.yml --env-file .env down -v   # matikan + hapus data
+```
+`synthesis.py` menulis `account_scores` lewat Spark (`mongo-spark-connector` 10.4.0, diunduh dari Maven
+saat Spark start; bila gagal otomatis memakai `pymongo`, atau paksa dengan `--no-connector`), lalu
+koleksi kecil lain (`model_metrics`, `datasets`, `feature_importance`, `risk_level_definitions`,
+`risk_level_summary`, `concept_comparison`, `coordination_evidence`, `high_score_profiles`,
+`cross_platform_summary`) dengan `pymongo`, lalu membaca ulang dan mencocokkan hitungannya.
+`--skip-mongo` menjalankan analisis + CSV saja. Tabel yang sama diekspor sebagai CSV datar ke
+`outputs/powerbi/` untuk Power BI (**Get Data → Text/CSV**); folder itu berisi data per akun sehingga
+ada di `.gitignore`.
+
+**Level risiko** 0 (*tidak ada indikasi*), 1 (*indikasi lemah, pantau*), 2 (*indikasi kuat, prioritas
+tinjauan manusia*), serta `NA` (*tidak dapat dinilai*, bukan 0). Ambang ditentukan dengan cross-fitting
+2 bagian dan hanya diberikan bila model lolos *evidence gate*; level 3–4 (koordinasi/amplifikasi) butuh
+data jaringan yang tidak ada di dataset mana pun, sehingga tidak pernah diberikan. Tidak ada aksi otomatis:
+level tertinggi berarti antrean tinjauan manusia.
 
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
@@ -113,8 +143,13 @@ Zona data mengikuti `paths` di `config.yaml`. Pipeline ingest/process/train mema
 |---|---|---|---|
 | `KAGGLE_USERNAME`, `KAGGLE_KEY` | salah satu cara login Kaggle | `scripts/download_datasets.py` | Alternatif: file `~/.kaggle/kaggle.json` (`chmod 600`), atau token baru di `KAGGLE_API_TOKEN` / `~/.kaggle/access_token`. Tidak perlu bila CSV ditaruh manual di `data/landing/<kunci>/`. |
 | `JAVA_HOME` | bila Java 17 bukan `java` default | Spark (semua skrip di `src/`) | Tidak ada path Java yang di-hard-code di kode; mis. `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` di Ubuntu. |
-| `MONGO_URI`, `MONGO_DB` | hanya untuk lapisan MongoDB | `common.get_mongo()` | Dibaca dari lingkungan atau file `.env` di root repo (tidak di-commit). Tanpa `MONGO_URI`, URI dirakit dari `MONGO_INITDB_ROOT_USERNAME`/`MONGO_INITDB_ROOT_PASSWORD` + `MONGO_HOST`/`MONGO_PORT`. |
+| `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` | ya, untuk MongoDB | `docker-compose.yml`, `common.get_mongo()` | User root MongoDB; compose menolak start bila kosong. |
+| `MONGO_PORT` | tidak (default 27017) | compose (port host), `common.get_mongo()` | Ganti bila 27017 sudah dipakai. |
+| `MONGO_DB` | tidak (default `socmed_bot_detection`) | `synthesis.py`, `common.get_mongo()` | Nama database. |
+| `MONGO_URI` | tidak | `common.get_mongo()` | Hanya bila MongoDB ada di tempat lain (mis. Atlas); tanpa ini URI dirakit dari variabel di atas + `MONGO_HOST`. |
 
+Semua variabel ada di [`.env.example`](.env.example) dengan nilai contoh saja. Salin menjadi `.env`; kode
+(`common.load_env()`) dan `docker compose --env-file .env` membacanya, tanpa menimpa variabel yang sudah di-set.
 Jangan pernah commit kredensial: `.env`, `.env.*` (kecuali `.env.example`) dan `kaggle.json` sudah ada di `.gitignore`.
 
 ## Lint dan test

@@ -1,0 +1,32 @@
+# Lapisan penyajian MongoDB: Spark -> MongoDB -> {dashboard Streamlit, ekspor Power BI}.
+# Sengaja kecil (batas memori 512 MB, cache WiredTiger 0,25 GB) supaya muat di laptop/VM kecil.
+#
+#   salin .env.example menjadi .env lalu isi user/password (jangan di-commit)
+#   start: docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d
+#   stop:  docker compose -f deploy/mongodb/docker-compose.yml --env-file .env down
+#   hapus datanya juga: tambahkan -v pada perintah down
+#
+# Tidak ada container_name tetap: nama container mengikuti nama project compose, jadi beberapa
+# salinan bisa jalan berdampingan (mis. `-p klp4-e2e` dengan MONGO_PORT=27018).
+name: klp4-bot-detection
+services:
+  mongo:
+    image: mongo:7.0
+    command: ["--wiredTigerCacheSizeGB", "0.25"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME:?isi MONGO_INITDB_ROOT_USERNAME di .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD:?isi MONGO_INITDB_ROOT_PASSWORD di .env}
+    ports:
+      - "127.0.0.1:${MONGO_PORT:-27017}:27017"   # hanya loopback; akses dari luar lewat SSH tunnel
+    volumes:
+      - mongo_data:/data/db
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+volumes:
+  mongo_data:

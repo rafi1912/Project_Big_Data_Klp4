@@ -11,3 +11,4 @@ scikit-learn     # jalur analisis: CV berulang, metrik bantu, audit (model tetap
 scipy            # jalur analisis: uji statistik
 matplotlib       # jalur analisis: gambar di outputs/figures/
 faker            # twitter_faker_check.py: daftar kata lorem Faker sebagai pembanding
+pymongo          # lapisan penyajian: synthesis.py, loader, dashboard (common.get_mongo)
