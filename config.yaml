@@ -33,7 +33,9 @@ datasets:
     kaggle: danieltreiman/twitter-human-bots-dataset    # verifikasi slug di Kaggle
     label_column: account_type
     positive_values: [bot]
-    id_columns: [id, screen_name]
+    # c0 = indeks baris tanpa nama (kolom pertama CSV), split = pembagian 0/1/2 buatan penyusun
+    # dataset. Keduanya bukan perilaku akun, jadi tidak boleh menjadi fitur.
+    id_columns: [id, screen_name, c0, split]
     text_columns: [description]
     hashtag_columns: []
     datetime_columns: []
