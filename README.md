@@ -60,6 +60,25 @@ dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashbo
   cd src && python process.py && python train.py
   ```
 
+## Jalur analisis lintas platform
+Selain pipeline operasional di atas, `src/` memuat pipeline analisis per platform yang menghasilkan
+angka-angka di laporan. Semuanya membaca file mentah yang sama di `data/landing/<kunci>/` dan menulis
+ke `outputs/` (metrik JSON, gambar) serta `outputs/predictions/` (skor per akun, tidak di-commit).
+
+| Skrip | Dataset (`data/landing/…`) | Keluaran utama |
+|---|---|---|
+| `src/twitter_faker_check.py` | `twitter_bot_detection` | `outputs/metrics/twitter_synthetic_faker_check.json` (bukti dataset sintetis) |
+| `src/twitter_pipeline.py` | `twitter_bot_detection` (kontrol negatif), `twitter_human_bots` (hasil utama X) | `outputs/metrics/twitter_{synthetic,real}.json`, gambar `outputs/figures/twitter_*.png` |
+
+```bash
+python src/twitter_faker_check.py          # beberapa detik, tanpa Spark
+python src/twitter_pipeline.py             # ±20 menit (CV 3-fold Random Forest pada 37 ribu akun)
+python src/twitter_pipeline.py --dataset real
+```
+Prosedurnya sama untuk setiap dataset: split berstrata 80:20 (seed 42), bobot kelas dari data latih,
+CV 3-fold di dalam data latih, Random Forest (model utama) dan Logistic Regression (baseline), lalu
+satu kali evaluasi di data uji terhadap baseline kelas mayoritas.
+
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
 - **konfigurasi & skema**: `load_config`, `path_of`, `landing_path`, `report_dir`, `snake`/`snake_all`,

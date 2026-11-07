@@ -7,3 +7,7 @@ pyarrow
 streamlit
 plotly
 kagglehub        # hanya untuk scripts/download_datasets.py
+scikit-learn     # jalur analisis: CV berulang, metrik bantu, audit (model tetap Spark MLlib)
+scipy            # jalur analisis: uji statistik
+matplotlib       # jalur analisis: gambar di outputs/figures/
+faker            # twitter_faker_check.py: daftar kata lorem Faker sebagai pembanding
