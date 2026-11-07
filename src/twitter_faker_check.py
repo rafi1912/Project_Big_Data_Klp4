@@ -1,16 +1,17 @@
 """Optional provenance check for the synthetic X/Twitter dataset (negative control).
 
 Compares the vocabulary of `Tweet` / `Hashtags` and the shape of `Location`
-in data/raw/twitter/bot_detection_data.csv with the word and place-name lists
+in data/landing/twitter_bot_detection/bot_detection_data.csv with the word and place-name lists
 shipped in the open-source `Faker` library (en_US locale). Writes
 outputs/metrics/twitter_synthetic_faker_check.json, which twitter_pipeline.py
 embeds in the synthetic dataset's `dataset_validation` block when present.
 
-Faker is NOT in the project venv (it is not needed for modelling). Install it
-into a throw-away directory and point this script at it:
+Faker is listed in requirements.txt. Run from the repo root:
 
-    pip install --target /tmp/fakerlib faker
-    python src/twitter_faker_check.py /tmp/fakerlib
+    python src/twitter_faker_check.py
+
+An optional first argument adds a directory to sys.path (e.g. a Faker
+installed with pip --target) for environments without Faker.
 """
 from __future__ import annotations
 
@@ -32,7 +33,7 @@ def main() -> None:
     from faker.providers.address.en_US import Provider as Address
     from faker.providers.lorem.en_US import Provider as Lorem
 
-    path = common.DATA_RAW / "twitter" / "bot_detection_data.csv"
+    path = common.landing_path("twitter_bot_detection") / "bot_detection_data.csv"
     d = pd.read_csv(path, keep_default_na=False, na_values=[""])
     word_list = {w.lower() for w in Lorem.word_list}
     tweet_vocab = {w for t in d["Tweet"].str.lower() for w in re.findall(r"[a-z]+", t)}

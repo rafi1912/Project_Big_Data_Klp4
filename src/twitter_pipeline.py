@@ -1,7 +1,7 @@
 """X / Twitter track - bot / inauthentic-account detection (Spark MLlib).
 
 Group "Penyayang Claude" - Teknologi Big Data, SV IPB University.
-Follows docs/CONTRACT.md. Uses src/common.py for the Spark session, the
+Follows the method rules in docs/methodology.md. Uses src/common.py for the Spark session, the
 stratified split, the metric set and the output writers.
 
 This track runs TWO datasets through the identical procedure:
@@ -21,11 +21,11 @@ Per dataset: stratified 80:20 split (seed 42) -> class weights from train ->
 Logistic Regression (baseline) -> impurity importance, LR coefficients and
 test-set permutation importance -> leakage audit -> JSON, scored CSV, figures.
 
-Run from a clean shell:
+Input: data/landing/twitter_bot_detection/bot_detection_data.csv and
+data/landing/twitter_human_bots/twitter_human_bots_dataset.csv (scripts/download_datasets.py).
 
-    cd ~/analysis/socmed-bot-detection
-    source .venv/bin/activate
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+Run from the repo root (Java 17 on PATH or JAVA_HOME set):
+
     python src/twitter_pipeline.py                  # both datasets
     python src/twitter_pipeline.py --dataset real   # one of them
 
@@ -52,9 +52,8 @@ import common  # noqa: E402
 # Configuration - every hyperparameter the track sets is recorded in the JSON
 # ---------------------------------------------------------------------------
 SEED = common.RANDOM_SEED
-SYN_PATH = common.DATA_RAW / "twitter" / "bot_detection_data.csv"
-REAL_PATH = (common.DATA_RAW / "twitter_real_candidates" / "treiman"
-             / "twitter_human_bots_dataset.csv")
+SYN_PATH = common.landing_path("twitter_bot_detection") / "bot_detection_data.csv"
+REAL_PATH = common.landing_path("twitter_human_bots") / "twitter_human_bots_dataset.csv"
 
 CV_FOLDS = 3
 CV_METRIC = "areaUnderPR"          # threshold-free, sensitive to the positive class
@@ -98,7 +97,7 @@ def r4(x) -> float | None:
 
 
 # ---------------------------------------------------------------------------
-# Generic helpers (track-local; common.py is not edited)
+# Generic helpers (track-local)
 # ---------------------------------------------------------------------------
 def bool_col(name: str):
     """'True'/'False' string -> 1.0/0.0. Anything else stays NULL (never 0)."""
