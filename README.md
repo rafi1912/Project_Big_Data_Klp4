@@ -52,12 +52,12 @@ dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashbo
 - **Nama kolom berawalan `#` berubah** (perbaikan `snake()`): `#friends` → `n_friends`,
   `#tags/post` → `n_tags_post` (sebelumnya `#tags/post` dan `tags/post` sama-sama menjadi `tags_post`
   sehingga Spark gagal dengan `AMBIGUOUS_REFERENCE`). Dataset yang terdampak: `facebook_spam` dan
-  `instagram_fake_spammer`. Bronze/silver yang dibangun dengan nama lama harus dibangun ulang.
-  Manifest ingest ikut dihapus, karena `ingest.py` melewati file yang sudah tercatat di manifest
-  walaupun bronze-nya sudah tidak ada:
+  `instagram_fake_spammer`. Bronze/silver yang dibangun dengan nama lama harus dibangun ulang:
   ```bash
-  rm -rf data/bronze data/silver reports/*/ingest_manifest.json && bash run_all.sh
+  rm -rf data/bronze data/silver && bash run_all.sh
   ```
+  Manifest ingest tidak perlu dihapus: `ingest.py` hanya melewati file yang batch-nya (`_batch_id`)
+  memang ada di bronze; entri manifest tanpa data di bronze dibuang dan file-nya di-ingest ulang.
 - **Kolom identitas tidak lagi menjadi fitur**: `facebook_spam` (`profile id`) dan
   `twitter_human_bots` (`c0` = indeks baris tanpa nama, `split` = pembagian buatan penyusun dataset).
   Bronze tidak berubah; cukup ulangi processing dan training:
