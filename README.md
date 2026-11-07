@@ -1,12 +1,13 @@
 # Sistem Big Data — Deteksi Akun Bot/Spam Media Sosial
 
-Prototipe pipeline end-to-end (Spark + Streamlit) untuk proyek Teknologi Big Data.
+Prototipe pipeline end-to-end (Spark + MongoDB + Streamlit) untuk proyek Teknologi Big Data.
 
 ```
 Landing (CSV mentah) → Ingestion (Spark batch, manifest sha256) → Bronze (Parquet)
   → Processing (Spark: dedup, label 0/1, fitur teks/waktu) → Silver → Gold (agregat, EDA)
   → Modeling (Spark MLlib: LogReg / RandomForest / GBT, dipilih di data validasi)
-  → Streaming scoring (Structured Streaming, micro-batch) → Dashboard Streamlit
+  → Streaming scoring (Structured Streaming, micro-batch)
+  → MongoDB (lapisan penyajian) → Dashboard Streamlit  (+ ekspor CSV untuk Power BI)
 ```
 
 ## Tech stack
@@ -34,12 +35,16 @@ Butuh Python 3.12 (3.10+ seharusnya jalan), **Java 17** (Spark), dan `pip instal
 (di Colab: `!apt-get -qq install openjdk-17-jdk-headless` lalu `pip install pyspark==3.5.3`).
 
 ```bash
+cp .env.example .env && chmod 600 .env  # isi user/password MongoDB
+docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d    # MongoDB (lihat di bawah)
 python scripts/download_datasets.py     # unduh ke data/landing/<kunci>/ (butuh kaggle.json), ATAU taruh CSV manual
-bash run_all.sh                         # ingest → process → train
+bash run_all.sh                         # ingest → process → train → muat hasil ke MongoDB
 cd src && python simulate_feed.py twitter_bot_detection --reset --batches 5 --size 200 --interval 3 &
-python stream.py twitter_bot_detection  # (tambah --once untuk memproses lalu berhenti)
+python stream.py twitter_bot_detection  # skor micro-batch → MongoDB stream_scores (--once: proses lalu berhenti)
 cd .. && streamlit run app/streamlit_app.py
 ```
+Tanpa Kaggle dan tanpa Spark, dashboard tetap bisa dibuka dengan data demo (lihat *Dashboard*):
+`python scripts/seed_demo.py`.
 Menambah dataset baru = tambah satu blok di `config.yaml` (label, kolom ID/teks/waktu). Kolom label
 dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashboard → **verifikasi pemetaan 0/1**.
 
@@ -121,6 +126,33 @@ tinjauan manusia*), serta `NA` (*tidak dapat dinilai*, bukan 0). Ambang ditentuk
 2 bagian dan hanya diberikan bila model lolos *evidence gate*; level 3–4 (koordinasi/amplifikasi) butuh
 data jaringan yang tidak ada di dataset mana pun, sehingga tidak pernah diberikan. Tidak ada aksi otomatis:
 level tertinggi berarti antrean tinjauan manusia.
+
+## Dashboard (Streamlit, hanya membaca MongoDB)
+`streamlit run app/streamlit_app.py` membuka 8 halaman. **Semua halaman membaca MongoDB saja**; bila
+MongoDB tidak terjangkau, dashboard menampilkan perintah untuk menyalakannya lalu berhenti (tidak ada
+cadangan berupa file).
+
+| Halaman | Koleksi MongoDB | Diisi oleh |
+|---|---|---|
+| Arsitektur & Data Lake | `pipeline_ingest_manifests`, `pipeline_datasets`, jumlah dokumen tiap koleksi | `run_all.sh` → `src/load_mongo.py` |
+| Kualitas Data, EDA, Model & Evaluasi | `pipeline_dq`, `pipeline_eda_sample`, `pipeline_feature_stats`, `pipeline_monthly_counts`, `pipeline_metrics`, `pipeline_roc`, `pipeline_feature_importance`, `pipeline_test_predictions` | `src/load_mongo.py` |
+| Streaming (simulasi) | `stream_scores` | `src/stream.py` (setiap micro-batch) |
+| Antrean Review Moderator | `account_scores` (filter dataset + level risiko; precision di atas ambang vs base rate bila ada label) | `src/synthesis.py` |
+| Level Risiko | `risk_level_definitions`, `risk_level_summary`, agregasi `account_scores` | `src/synthesis.py` |
+| Perbandingan Lintas Platform | `datasets`, `model_metrics`, `concept_comparison`, `coordination_evidence` | `src/synthesis.py` |
+
+**Data demo** (`python scripts/seed_demo.py`, butuh database kosong; `--reset` menghapus isi database
+`MONGO_DB` dulu) memuat hanya data tanpa identitas akun nyata:
+- hasil batch + skor streaming dataset **sintetis** `twitter_bot_detection` yang di-commit di `reports/` dan
+  `data/gold/` (username buatan Faker) → halaman 1–5 berisi dataset itu saja;
+- agregat hasil analisis dari run lengkap (`demo/analysis_aggregates.json`, dibuat
+  `scripts/export_demo_snapshot.py` yang menolak menulis bila ada pola identitas) → halaman Level Risiko
+  dan Perbandingan Lintas Platform menampilkan angka hasil run lengkap;
+- `account_scores` demo = akun uji sintetis, diberi level dengan aturan `synthesis.py`; evidence gate
+  gagal (model tanpa sinyal), jadi antrean moderator demo menunjukkan semua akun *Tidak dapat dinilai*.
+
+Yang hanya muncul setelah **run lengkap**: hasil batch dataset nyata (Treiman, Instagram, Facebook),
+antrean moderator untuk akun nyata (X, Instagram, Facebook, TikTok) dan skor streaming dataset lain.
 
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
