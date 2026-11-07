@@ -22,10 +22,9 @@ and builds four things on top:
      comparison are loaded too, then queried back and checked.
   4. Flat Power BI tables in outputs/powerbi/.
 
-Run:
-    source .venv/bin/activate
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-    docker compose -f deploy/mongodb/docker-compose.yml --env-file .env.mongo up -d
+Run from the repo root after the four platform tracks (Java 17 on PATH or JAVA_HOME set;
+MongoDB settings in .env, see .env.example):
+    docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d
     python src/synthesis.py              # everything
     python src/synthesis.py --skip-mongo # analysis + CSVs only
 """
@@ -48,15 +47,16 @@ import common  # noqa: E402
 
 ROOT = common.PROJECT_ROOT
 SEED = common.RANDOM_SEED
-OUT_POWERBI = ROOT / "outputs" / "powerbi"
+OUT_POWERBI = common.OUT_POWERBI
 OUT_POWERBI.mkdir(parents=True, exist_ok=True)
-LOG_PATH = ROOT / "logs" / "synthesis.log"
+LOG_PATH = common.OUTPUTS / "logs" / "synthesis.log"
+LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 CURATED_ACCOUNTS = common.DATA_CURATED / "cross_platform_account_scores.parquet"
 
-RAW_X_REAL = common.DATA_RAW / "twitter_real_candidates" / "treiman" / "twitter_human_bots_dataset.csv"
-RAW_IG = [common.DATA_RAW / "instagram" / "train.csv", common.DATA_RAW / "instagram" / "test.csv"]
-RAW_FB = common.DATA_RAW / "facebook" / "Facebook Spam Dataset.csv"
-RAW_X_SYN = common.DATA_RAW / "twitter" / "bot_detection_data.csv"
+RAW_X_REAL = common.landing_path("twitter_human_bots") / "twitter_human_bots_dataset.csv"
+RAW_IG = [common.landing_path("instagram_fake_spammer") / f for f in ("train.csv", "test.csv")]
+RAW_FB = common.landing_path("facebook_spam") / "Facebook Spam Dataset.csv"
+RAW_X_SYN = common.landing_path("twitter_bot_detection") / "bot_detection_data.csv"
 
 MONGO_CONNECTOR = "org.mongodb.spark:mongo-spark-connector_2.12:10.4.0"
 N_BOOT = 1000          # bootstrap resamples for univariate AUC intervals
