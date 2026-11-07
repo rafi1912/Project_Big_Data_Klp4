@@ -44,7 +44,7 @@ datasets:
   instagram_fake_spammer:
     platform: Instagram
     kaggle: free4ever1/instagram-fake-spammer-genuine-accounts
-    label_column: null          # null = deteksi otomatis; isi manual bila gagal
+    label_column: fake          # header asli train.csv/test.csv (0 = asli, 1 = palsu/spammer)
     positive_values: null       # null = default (1/true/bot/fake/spam/spammer)
     id_columns: []
     text_columns: []
