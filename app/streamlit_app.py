@@ -21,8 +21,9 @@ import common  # noqa: E402
 
 START_CMD = "docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d"
 PAGES = ["Arsitektur & Data Lake", "Kualitas Data", "EDA", "Model & Evaluasi", "Streaming (simulasi)",
-         "Antrean Review Moderator"]
+         "Antrean Review Moderator", "Level Risiko"]
 PIPELINE_PAGES = PAGES[1:5]
+LEVEL_COLOR = {"0": "#9ec5f4", "1": "#f2b84b", "2": "#e34948", "NA": "#bdbdbd"}
 st.set_page_config(page_title="Deteksi Akun Bot — Big Data", page_icon="🤖", layout="wide")
 
 
@@ -259,7 +260,7 @@ elif page == "Streaming (simulasi)":
         st.rerun()
 
 # ---------------------------------------------------------------- 6
-else:
+elif page == "Antrean Review Moderator":
     st.title("Antrean review moderator")
     st.warning("Skor dan level adalah **sinyal bantu** untuk memprioritaskan pemeriksaan manusia — bukan dasar "
                "tunggal untuk menghapus atau menghukum akun. Tidak ada aksi otomatis.")
@@ -298,4 +299,49 @@ else:
         st.error("Model dataset ini **gagal evidence gate** (tidak lebih baik daripada acak): semua akun berstatus "
                  "*Tidak dapat dinilai* (NA), bukan Level 0.")
     st.dataframe(q[[c for c in cols if c in q.columns]].head(top), width="stretch", hide_index=True)
+
+# ---------------------------------------------------------------- 7
+else:
+    st.title("Level risiko 0–4")
+    defs = find("risk_level_definitions", sort=[("code", 1)])
+    need(len(defs) > 0, NO_SYNTHESIS)
+    st.caption("Nama level menggambarkan **kekuatan bukti dan tindakan yang pantas**, bukan vonis tentang pemilik "
+               "akun. Ambang ditentukan dengan cross-fitting 2 bagian: setiap akun dinilai dengan ambang yang "
+               "diturunkan dari bagian data lainnya.")
+    show = defs[["code", "name_id", "name_concept_doc", "suggested_action", "reachable"]].rename(
+        columns={"code": "kode", "name_id": "nama (laporan ini)", "name_concept_doc": "nama di dokumen konsep §13",
+                 "suggested_action": "tindakan", "reachable": "dapat dicapai"})
+    st.dataframe(show, width="stretch", hide_index=True)
+    st.info("Level 3 dan 4 membutuhkan bukti koordinasi/amplifikasi antar akun (waktu unggah, konten bersama, "
+            "graf interaksi) yang tidak ada di dataset mana pun, sehingga **tidak pernah diberikan**. "
+            "NA = tidak dapat dinilai, bukan Level 0.")
+    summ = find("risk_level_summary")
+    per = summ[summ["kind"] == "per_level"].copy() if len(summ) else summ
+    if len(per):
+        per["level"] = per["level_code"].astype(str)
+        st.plotly_chart(px.bar(per, x="dataset", y="n_accounts", color="level", barmode="stack",
+                               color_discrete_map=LEVEL_COLOR, title="Jumlah akun per level (cross-fitted)"),
+                        width="stretch")
+        withp = per[per["precision_in_level"].notna()].copy()
+        if len(withp):
+            withp["err_hi"] = withp["precision_ci95_high"] - withp["precision_in_level"]
+            withp["err_lo"] = withp["precision_in_level"] - withp["precision_ci95_low"]
+            fig = px.scatter(withp, x="level", y="precision_in_level", color="dataset", error_y="err_hi",
+                             error_y_minus="err_lo", title="Precision di setiap level (IK 95% Wilson)")
+            fig.update_traces(marker_size=11)
+            st.plotly_chart(fig, width="stretch")
+        st.subheader("Ringkasan per level")
+        cols = ["dataset", "level_code", "n_accounts", "volume_share", "n_inauthentic", "precision_in_level",
+                "precision_ci95_low", "precision_ci95_high", "t1_deployment", "t2_deployment"]
+        st.dataframe(per[[c for c in cols if c in per.columns]], width="stretch", hide_index=True)
+    other = summ[summ["kind"] != "per_level"] if len(summ) else summ
+    if len(other):
+        with st.expander("Kumulatif, tidak dapat dicapai, dan tidak dapat dinilai"):
+            st.dataframe(other, width="stretch", hide_index=True)
+    agg = list(db["account_scores"].aggregate([
+        {"$group": {"_id": {"dataset": "$dataset", "level": "$risk_level_code"}, "n": {"$sum": 1}}}]))
+    if agg:
+        st.subheader("Hitungan langsung dari `account_scores` (agregasi di MongoDB)")
+        t = pd.DataFrame([{"dataset": a["_id"]["dataset"], "level": a["_id"]["level"], "akun": a["n"]} for a in agg])
+        st.dataframe(t.pivot_table(index="dataset", columns="level", values="akun", fill_value=0), width="stretch")
 
