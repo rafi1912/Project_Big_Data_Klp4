@@ -78,3 +78,36 @@ pytest
 - Penulis PR **menanggapi setiap komentar**: perbaiki, atau jelaskan kenapa tidak. Reviewer yang
   menandai percakapan *resolved*.
 - Kritik kode, bukan orang. Bila diskusi melebar, pindahkan ke issue.
+
+## 6. PR bertumpuk (stacked) dan cara merge
+
+Pekerjaan besar dipecah menjadi rantai PR: PR 1 menargetkan `main`, PR 2 menargetkan branch PR 1,
+PR 3 menargetkan branch PR 2, dan seterusnya. Setiap PR hanya menampilkan perubahannya sendiri,
+sehingga mudah direview, dan **setiap ujung branch harus lolos lint + test sendiri**.
+
+Aturan merge:
+
+1. Merge **berurutan**: PR 1 dulu, lalu PR 2, dst. Jangan merge PR di tengah rantai lebih dulu.
+2. Pakai tombol **"Create a merge commit"**. **Jangan** "Squash and merge" atau "Rebase and merge"
+   untuk rantai bertumpuk: keduanya membuat commit baru dengan hash berbeda, sehingga PR
+   berikutnya masih membawa commit lama dan diff-nya ikut menampilkan ulang perubahan PR
+   sebelumnya (dan bisa konflik).
+3. Setelah PR 1 di-merge dan branch-nya terhapus otomatis (lihat §7), GitHub otomatis
+   memindahkan target PR 2 ke `main`. Periksa CI PR 2 hijau lagi, lalu review/merge.
+
+## 7. Pengaturan yang hanya bisa dilakukan admin (Rafi)
+
+Pengaturan berikut ada di **Settings** repo dan hanya bisa diubah pemilik/admin:
+
+1. **Lindungi `main`** (Settings → Branches → *Add branch ruleset* / *branch protection rule*
+   untuk `main`):
+   - *Require a pull request before merging*, dengan **1 approval**;
+   - *Require status checks to pass*: centang `lint`, `test`, dan `pr-title` dari workflow CI;
+   - *Require conversation resolution before merging*;
+   - bypass admin **hanya untuk hotfix darurat**, dan tetap dicatat di issue.
+2. **Aktifkan "Automatically delete head branches"** (Settings → General → Pull Requests).
+   PR bertumpuk bergantung pada ini: ketika branch PR 1 dihapus setelah merge, GitHub otomatis
+   mengganti target PR 2 menjadi `main`. Tanpa penghapusan otomatis, PR 2 tetap menargetkan branch
+   lama yang sudah di-merge dan harus dipindahkan manual satu per satu.
+3. Opsional: di bagian yang sama, matikan "Allow squash merging" dan "Allow rebase merging"
+   selama rantai PR bertumpuk masih terbuka, supaya tidak salah tekan.
