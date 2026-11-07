@@ -1,15 +1,14 @@
 """Facebook track - spam profile detection from profile + activity metadata.
 
-Run from the project root in a clean shell:
+Run from the repo root (Java 17 on PATH or JAVA_HOME set):
 
-    source .venv/bin/activate
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     python src/facebook_pipeline.py
 
-Data: Kaggle ``khajahussainsk/facebook-spam-dataset`` - one file,
-600 rows, 497 legit / 103 spam (~17% positive, genuinely imbalanced).
+Data: Kaggle ``khajahussainsk/facebook-spam-dataset`` in data/landing/facebook_spam/
+(scripts/download_datasets.py) - one file, 600 rows, 497 legit / 103 spam
+(~17% positive, genuinely imbalanced).
 
-Method (docs/CONTRACT.md):
+Method (docs/methodology.md):
   * ``profile id`` is an identifier -> dropped (rule 1). It also turns out to be
     a label leak because the file is ordered by class; that is audited and
     reported, not modelled.
@@ -41,7 +40,7 @@ import common
 import profile_tracks_utils as U
 
 TRACK = "facebook"
-RAW_FILE = common.DATA_RAW / "facebook" / "Facebook Spam Dataset.csv"
+RAW_FILE = common.landing_path("facebook_spam") / "Facebook Spam Dataset.csv"
 T0 = time.time()
 
 RENAME = {
@@ -482,7 +481,8 @@ def plot_block_conflicts(s, raw, path):
 # Main
 # ==========================================================================
 def main():
-    spark = common.get_spark("facebook_track")  # 2g driver, 3 cores (contract limits)
+    # cores=3 as in the reference run: the partition count feeds the seeded splits.
+    spark = common.get_spark("facebook_track", driver_memory="2g", cores=3)
     try:
         run(spark)
     finally:

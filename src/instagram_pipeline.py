@@ -1,15 +1,14 @@
 """Instagram track - fake / spammer account detection from profile metadata.
 
-Run from the project root in a clean shell:
+Run from the repo root (Java 17 on PATH or JAVA_HOME set):
 
-    source .venv/bin/activate
-    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
     python src/instagram_pipeline.py
 
-Data: Kaggle ``free4ever1/instagram-fake-spammer-genuine-accounts``
-(train.csv 576 rows + test.csv 120 rows = 696 accounts, 348 genuine / 348 fake).
+Data: Kaggle ``free4ever1/instagram-fake-spammer-genuine-accounts`` in
+data/landing/instagram_fake_spammer/ (scripts/download_datasets.py):
+train.csv 576 rows + test.csv 120 rows = 696 accounts, 348 genuine / 348 fake.
 
-Method (docs/CONTRACT.md):
+Method (docs/methodology.md):
   * the two vendor files are combined and re-split with the contract's
     stratified 80:20 split (seed 42) -> HEADLINE result;
   * the vendor's own train/test partition is evaluated as a SECONDARY check;
@@ -39,7 +38,7 @@ import common
 import profile_tracks_utils as U
 
 TRACK = "instagram"
-RAW = common.DATA_RAW / "instagram"
+RAW = common.landing_path("instagram_fake_spammer")
 T0 = time.time()
 
 # original column -> code-safe name
@@ -141,7 +140,8 @@ def data_audit(raw: pd.DataFrame) -> dict:
 
 
 def main():
-    spark = common.get_spark("instagram_track")  # 2g driver, 3 cores (contract limits)
+    # cores=3 as in the reference run: the partition count feeds the seeded splits.
+    spark = common.get_spark("instagram_track", driver_memory="2g", cores=3)
     try:
         run(spark)
     finally:

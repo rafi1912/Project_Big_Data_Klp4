@@ -1,8 +1,8 @@
 """Helpers for the two profile-metadata tracks (Instagram, Facebook) only.
 
-The contract forbids editing ``common.py``; anything the Instagram and Facebook
-pipelines both need beyond it lives here. It is owned by the IG/FB track and
-is not imported by the X/Twitter or TikTok tracks.
+Anything the Instagram and Facebook pipelines both need beyond ``common`` lives
+here. It is owned by the IG/FB track and is not imported by the X/Twitter or
+TikTok tracks.
 
 What it adds on top of ``common``:
   * one place where the Random Forest / Logistic Regression pipelines and their
