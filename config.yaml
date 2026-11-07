@@ -26,7 +26,9 @@ datasets:
     text_columns: [Tweet]
     hashtag_columns: [Hashtags]
     datetime_columns: [Created At]
-    note: "50.000 baris, kemungkinan sintetis (tweet acak, distribusi seragam)."
+    note: >-
+      50.000 baris, TERBUKTI sintetis: kosakata kolom Tweet persis 971 kata daftar `lorem` Faker
+      (en_US). Dipertahankan sebagai kontrol negatif: model yang jujur harus mendapat ROC-AUC ~0,5.
 
   twitter_human_bots:
     platform: Twitter/X
