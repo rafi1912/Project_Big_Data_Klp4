@@ -5,8 +5,9 @@ cd "$(dirname "$0")/src"
 python ingest.py     # 1. landing  -> bronze
 python process.py    # 2. bronze   -> silver + gold + laporan kualitas data
 python train.py      # 3. silver   -> model terbaik + metrik
+python load_mongo.py || echo "[run_all] PERINGATAN: hasil batch ada di disk tetapi BELUM dimuat ke MongoDB (dashboard hanya membaca MongoDB). Nyalakan MongoDB lalu: cd src && python load_mongo.py"   # 4. hasil -> MongoDB
 echo
 echo "Batch selesai. Streaming demo (contoh dataset twitter_bot_detection):"
 echo "  python simulate_feed.py twitter_bot_detection --reset --batches 5 --size 200 --interval 3 &"
 echo "  python stream.py twitter_bot_detection"
-echo "Dashboard:  cd .. && streamlit run app/streamlit_app.py"
+echo "Dashboard (membaca MongoDB):  cd .. && streamlit run app/streamlit_app.py"
