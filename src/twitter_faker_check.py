@@ -26,25 +26,15 @@ import common  # noqa: E402
 import pandas as pd  # noqa: E402
 
 
-def main() -> None:
-    if len(sys.argv) > 1:
-        sys.path.insert(0, sys.argv[1])
-    import faker
-    from faker.providers.address.en_US import Provider as Address
-    from faker.providers.lorem.en_US import Provider as Lorem
-
-    path = common.landing_path("twitter_bot_detection") / "bot_detection_data.csv"
-    d = pd.read_csv(path, keep_default_na=False, na_values=[""])
-    word_list = {w.lower() for w in Lorem.word_list}
+def compare(d: pd.DataFrame, word_list: set, prefixes: set, suffixes: set) -> dict:
+    """Compare one dataset frame with Faker's lists. Pure: no Faker import, no file I/O."""
     tweet_vocab = {w for t in d["Tweet"].str.lower() for w in re.findall(r"[a-z]+", t)}
     tag_vocab = {w for t in d["Hashtags"].fillna("").str.lower() for w in re.findall(r"[a-z]+", t)}
-    prefixes, suffixes = set(Address.city_prefixes), set(Address.city_suffixes)
     loc = d["Location"]
     first = loc.str.split().str[0]
     has_prefix = first.isin(prefixes) & (loc.str.split().str.len() > 1)
     has_suffix = loc.apply(lambda s: any(s.endswith(x) for x in suffixes))
-    out = {
-        "faker_version": faker.VERSION,
+    return {
         "faker_en_US_lorem_word_list_size": len(word_list),
         "tweet_vocabulary_size": len(tweet_vocab),
         "tweet_words_in_faker_list": len(tweet_vocab & word_list),
@@ -59,6 +49,20 @@ def main() -> None:
                     if tweet_vocab == word_list and tag_vocab <= word_list
                     else "vocabulary differs from Faker's list"),
     }
+
+
+def main() -> None:
+    if len(sys.argv) > 1:
+        sys.path.insert(0, sys.argv[1])
+    import faker
+    from faker.providers.address.en_US import Provider as Address
+    from faker.providers.lorem.en_US import Provider as Lorem
+
+    path = common.landing_path("twitter_bot_detection") / "bot_detection_data.csv"
+    d = pd.read_csv(path, keep_default_na=False, na_values=[""])
+    word_list = {w.lower() for w in Lorem.word_list}
+    out = {"faker_version": faker.VERSION,
+           **compare(d, word_list, set(Address.city_prefixes), set(Address.city_suffixes))}
     dest = common.OUT_METRICS / "twitter_synthetic_faker_check.json"
     dest.write_text(json.dumps(out, indent=2))
     print(json.dumps(out, indent=2))
