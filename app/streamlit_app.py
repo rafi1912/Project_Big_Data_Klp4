@@ -21,7 +21,7 @@ import common  # noqa: E402
 
 START_CMD = "docker compose -f deploy/mongodb/docker-compose.yml --env-file .env up -d"
 PAGES = ["Arsitektur & Data Lake", "Kualitas Data", "EDA", "Model & Evaluasi", "Streaming (simulasi)",
-         "Antrean Review Moderator", "Level Risiko"]
+         "Antrean Review Moderator", "Level Risiko", "Perbandingan Lintas Platform"]
 PIPELINE_PAGES = PAGES[1:5]
 LEVEL_COLOR = {"0": "#9ec5f4", "1": "#f2b84b", "2": "#e34948", "NA": "#bdbdbd"}
 st.set_page_config(page_title="Deteksi Akun Bot — Big Data", page_icon="🤖", layout="wide")
@@ -301,7 +301,7 @@ elif page == "Antrean Review Moderator":
     st.dataframe(q[[c for c in cols if c in q.columns]].head(top), width="stretch", hide_index=True)
 
 # ---------------------------------------------------------------- 7
-else:
+elif page == "Level Risiko":
     st.title("Level risiko 0–4")
     defs = find("risk_level_definitions", sort=[("code", 1)])
     need(len(defs) > 0, NO_SYNTHESIS)
@@ -345,3 +345,44 @@ else:
         t = pd.DataFrame([{"dataset": a["_id"]["dataset"], "level": a["_id"]["level"], "akun": a["n"]} for a in agg])
         st.dataframe(t.pivot_table(index="dataset", columns="level", values="akun", fill_value=0), width="stretch")
 
+# ---------------------------------------------------------------- 8
+else:
+    st.title("Perbandingan lintas platform")
+    meta = find("datasets")
+    need(len(meta) > 0, NO_SYNTHESIS)
+    st.warning("**Bukan peringkat akurasi.** Mengurutkan platform menurut akurasi akan menaruh file Facebook yang "
+             "tersusun per label di atas, dan X (satu-satunya dataset nyata yang besar) di bawah. Baris diurutkan "
+             "menurut bobot bukti.")
+    if "evidential_weight_order" in meta.columns:
+        meta = meta.sort_values("evidential_weight_order")
+    cols = ["dataset", "platform", "dataset_role", "n_rows", "positive_rate", "label_concept", "verdict",
+            "number_to_quote"]
+    st.dataframe(meta[[c for c in cols if c in meta.columns]], width="stretch", hide_index=True)
+    rows = []
+    for m in db["model_metrics"].find({"models": {"$exists": True}}, {"_id": 0}):
+        for model, block in (m.get("models") or {}).items():
+            met = (block or {}).get("metrics") or {}
+            base = (met.get("baseline_majority_class") or {}).get("accuracy")
+            rows.append({"dataset": m["dataset"], "model": model, "accuracy": met.get("accuracy"),
+                         "baseline_mayoritas": base, "balanced_accuracy": met.get("balanced_accuracy"),
+                         "mcc": met.get("mcc"), "roc_auc": met.get("roc_auc"), "pr_auc": met.get("pr_auc")})
+    if rows:
+        st.subheader("Metrik data uji vs baseline kelas mayoritas")
+        st.dataframe(pd.DataFrame(rows), width="stretch", hide_index=True)
+    cc = find("concept_comparison")
+    if len(cc):
+        st.subheader("Arah setiap indikator perilaku per dataset")
+        cc = cc[cc["auc"].notna()].copy()
+        cc["err_hi"] = cc["auc_ci95_high"] - cc["auc"]
+        cc["err_lo"] = cc["auc"] - cc["auc_ci95_low"]
+        fig = px.scatter(cc, x="auc", y="indicator", color="dataset", error_x="err_hi", error_x_minus="err_lo",
+                         title="ROC-AUC univariat indikator (0,5 = tidak membedakan)")
+        fig.add_vline(x=0.5, line_dash="dash")
+        st.plotly_chart(fig, width="stretch")
+        st.caption("AUC > 0,5: nilai tinggi lebih sering pada akun tidak autentik; < 0,5: sebaliknya. Arah hanya "
+                   "diklaim bila interval kepercayaan 95% tidak memuat 0,5.")
+    ev = find("coordination_evidence")
+    if len(ev):
+        st.subheader("Bukti koordinasi yang tersedia (syarat Level 3–4)")
+        st.dataframe(ev.pivot_table(index="evidence_type", columns="dataset", values="status", aggfunc="first"),
+                     width="stretch")
