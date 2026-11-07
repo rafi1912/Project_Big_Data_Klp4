@@ -159,6 +159,29 @@ halaman diawali banner "Mode demo"** dan hitungan 100.000 baris di halaman Arsit
 hitungan data demo, bukan sistem lengkap. `src/load_mongo.py` (langkah terakhir `run_all.sh`) dan
 `src/synthesis.py` menghapus penanda itu (beserta akun demo di `account_scores`) saat memuat hasil run lengkap.
 
+## Tangkapan layar dashboard
+Tangkapan layar di bawah diambil dalam **mode demo** (database diisi `python scripts/seed_demo.py`), **bukan**
+dari run lengkap: setiap halaman diawali banner "Mode demo", data per akun hanya berasal dari dataset sintetis
+`twitter_bot_detection`, dan halaman Level Risiko serta Perbandingan Lintas Platform memakai agregat hasil
+analisis tanpa identitas akun. Diambil dengan Chrome headless, lebar 1440 px, tema terang.
+
+**Antrean Review Moderator** — akun demo sintetis; model gagal *evidence gate*, jadi semuanya *Tidak dapat dinilai*:
+
+![Antrean Review Moderator (mode demo)](docs/img/dashboard/06-antrean-moderator.png)
+
+**Level Risiko** — definisi level 0–4 dan ringkasan per level dari run lengkap (agregat):
+
+![Level Risiko (mode demo)](docs/img/dashboard/07-level-risiko.png)
+
+**Arsitektur & Data Lake**:
+
+![Arsitektur & Data Lake (mode demo)](docs/img/dashboard/01-arsitektur.png)
+
+Halaman lain: [Kualitas Data](docs/img/dashboard/02-kualitas-data.png) ·
+[EDA](docs/img/dashboard/03-eda.png) · [Model & Evaluasi](docs/img/dashboard/04-model-evaluasi.png) ·
+[Streaming (simulasi)](docs/img/dashboard/05-streaming.png) ·
+[Perbandingan Lintas Platform](docs/img/dashboard/08-lintas-platform.png).
+
 ## Modul bersama `src/common.py`
 Satu modul dipakai semua skrip di `src/`:
 - **konfigurasi & skema**: `load_config`, `path_of`, `landing_path`, `report_dir`, `snake`/`snake_all`,
