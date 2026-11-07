@@ -111,6 +111,42 @@ def get_spark(name: str = "bigdata-bot-detection", driver_memory: str = "2g", co
     return spark
 
 
+# ---- Jalur analisis: split, nama fitur, evaluasi, keluaran ---------------------------------
+# Sama untuk setiap track agar metrik dan split dapat dibandingkan lintas platform.
+RANDOM_SEED = 42
+TEST_FRACTION = 0.20
+
+
+def stratified_split(df, label_col: str = "label",
+                     test_fraction: float = TEST_FRACTION,
+                     seed: int = RANDOM_SEED):
+    """Stratified train/test split that preserves duplicate rows.
+
+    Uses an anti-join on a surrogate row id rather than DataFrame.subtract(),
+    because subtract() de-duplicates and would silently drop repeated rows.
+    """
+    tagged = df.withColumn("_row_id", F.monotonically_increasing_id()).cache()
+    labels = [r[0] for r in tagged.select(label_col).distinct().collect()]
+    fractions = {lab: 1.0 - test_fraction for lab in labels}
+
+    train = tagged.sampleBy(label_col, fractions=fractions, seed=seed).cache()
+    test = tagged.join(train.select("_row_id"), on="_row_id", how="left_anti")
+    return train.drop("_row_id"), test.drop("_row_id")
+
+
+def assembled_feature_names(df, features_col: str = "features") -> list[str]:
+    """Recover column names from a VectorAssembler output, in vector order.
+
+    Handles one-hot / indexed expansions, which a plain inputCols list does not.
+    """
+    attrs = df.schema[features_col].metadata["ml_attr"]["attrs"]
+    indexed = []
+    for kind in ("numeric", "binary", "nominal"):
+        for a in attrs.get(kind, []):
+            indexed.append((a["idx"], a["name"]))
+    return [name for _, name in sorted(indexed)]
+
+
 def detect_label(columns, configured=None):
     cols = [snake(c) for c in columns]
     if configured:
