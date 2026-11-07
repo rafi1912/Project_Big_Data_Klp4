@@ -9,6 +9,17 @@ Landing (CSV mentah) → Ingestion (Spark batch, manifest sha256) → Bronze (Pa
   → Streaming scoring (Structured Streaming, micro-batch) → Dashboard Streamlit
 ```
 
+## Tech stack
+| Lapisan | Teknologi |
+|---|---|
+| Bahasa | Python 3.12 (versi yang dipakai CI) |
+| Pemrosesan batch & streaming | Apache Spark 3.5.3 (PySpark, Spark SQL, Structured Streaming) di atas **Java 17** |
+| Machine learning | Spark MLlib (Logistic Regression, Random Forest, GBT) |
+| Penyimpanan data lake | Parquet (zona bronze/silver/gold), pyarrow, pandas |
+| Dashboard | Streamlit + Plotly |
+| Sumber data | Kaggle lewat `kagglehub` (`scripts/download_datasets.py`) |
+| Kualitas kode | ruff (lint), pytest (test), GitHub Actions (CI) — lihat [CONTRIBUTING.md](CONTRIBUTING.md) |
+
 ## ⚠️ Perbaikan link dataset (kenapa link lama tidak bisa dibuka)
 Ketiga slug di dokumen "LINK DATASET" dan notebook EDA kehilangan tanda hubung. Yang benar:
 
@@ -19,7 +30,7 @@ Ketiga slug di dokumen "LINK DATASET" dan notebook EDA kehilangan tanda hubung. 
 | Facebook | `khajahussainsk/facebookspam-dataset` | `khajahussainsk/facebook-spam-dataset` |
 
 ## Cara menjalankan
-Butuh Python 3.10+, **Java 17** (Spark), dan `pip install -r requirements.txt`
+Butuh Python 3.12 (3.10+ seharusnya jalan), **Java 17** (Spark), dan `pip install -r requirements.txt`
 (di Colab: `!apt-get -qq install openjdk-17-jdk-headless` lalu `pip install pyspark==3.5.3`).
 
 ```bash
@@ -31,6 +42,23 @@ cd .. && streamlit run app/streamlit_app.py
 ```
 Menambah dataset baru = tambah satu blok di `config.yaml` (label, kolom ID/teks/waktu). Kolom label
 dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashboard → **verifikasi pemetaan 0/1**.
+
+## Environment variables
+| Variabel | Wajib? | Dipakai oleh | Keterangan |
+|---|---|---|---|
+| `KAGGLE_USERNAME`, `KAGGLE_KEY` | salah satu cara login Kaggle | `scripts/download_datasets.py` | Alternatif: file `~/.kaggle/kaggle.json` (`chmod 600`), atau token baru di `KAGGLE_API_TOKEN` / `~/.kaggle/access_token`. Tidak perlu bila CSV ditaruh manual di `data/landing/<kunci>/`. |
+| `JAVA_HOME` | bila Java 17 bukan `java` default | Spark (semua skrip di `src/`) | Mis. `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` di Ubuntu. |
+
+Jangan pernah commit kredensial: `.env`, `.env.*` (kecuali `.env.example`) dan `kaggle.json` sudah ada di `.gitignore`.
+
+## Lint dan test
+```bash
+pip install -r requirements-dev.txt
+ruff check .     # aturan dikunci di pyproject.toml
+pytest           # test unit di tests/ (sebagian memakai Spark lokal kecil)
+```
+CI (GitHub Actions) menjalankan keduanya plus cek format judul PR di setiap pull request.
+Alur kerja tim (branch, PR, review, merge) ada di [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Hasil uji pada data yang tersedia (Twitter-Bot Detection, 50.000 baris)
 Pipeline berjalan penuh (ingest → process → train → streaming 3 micro-batch → 6 halaman dashboard tanpa error).

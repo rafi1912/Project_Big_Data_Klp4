@@ -1,4 +1,4 @@
-pyspark>=3.5
+pyspark==3.5.3     # dikunci: versi yang dipakai saat verifikasi; Spark 4 (ANSI default, Scala 2.13) belum diuji
 pyyaml
 pandas
 numpy

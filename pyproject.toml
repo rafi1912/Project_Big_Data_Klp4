@@ -1,0 +1,14 @@
+# Konfigurasi alat (lint & test) saja; repo ini bukan paket Python yang dipasang.
+# CI dan perintah lokal `ruff check .` / `pytest` sama-sama membaca file ini.
+
+[tool.ruff]
+target-version = "py312"
+
+[tool.ruff.lint]
+# Dikunci eksplisit: E9 = error sintaks/IO, F = pyflakes (impor/variabel tak terpakai,
+# nama tak terdefinisi). Default ruff ikut berubah antar-versi, jadi jangan diandalkan.
+select = ["E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

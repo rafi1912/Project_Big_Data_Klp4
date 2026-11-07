@@ -1,0 +1,66 @@
+name: CI
+
+# pull_request tanpa filter branch: PR bertumpuk (stacked) menargetkan branch selain main.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - name: ruff (aturan dari pyproject.toml)
+        run: ruff check --output-format=github .
+
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest -q
+
+  pr-title:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Judul PR mengikuti conventional commits
+        # Judul PR dikirim lewat env, BUKAN ${{ }} di dalam skrip: judul adalah input
+        # pengguna dan interpolasi langsung membuka celah script injection.
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|refactor|docs|chore|test)(\([a-z0-9-]+\))?!?: .+'
+          if [[ "$PR_TITLE" =~ $pattern ]]; then
+            echo "OK: $PR_TITLE"
+          else
+            echo "::error::Judul PR harus berbentuk 'tipe(scope)?: deskripsi', tipe salah satu feat|fix|refactor|docs|chore|test (tambahkan ! untuk breaking change). Contoh: 'fix(common)!: keep column names distinct'"
+            exit 1
+          fi
