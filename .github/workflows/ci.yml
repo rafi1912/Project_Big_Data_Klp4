@@ -30,6 +30,21 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # MongoDB sekali pakai untuk test dashboard (AppTest, tests/test_dashboard.py). Kredensial ini
+    # hanya untuk container CI yang dibuang setelah job selesai; bukan kredensial sungguhan.
+    services:
+      mongo:
+        image: mongo:7.0
+        env:
+          MONGO_INITDB_ROOT_USERNAME: ci
+          MONGO_INITDB_ROOT_PASSWORD: ci-only-throwaway
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      MONGO_URI: mongodb://ci:ci-only-throwaway@127.0.0.1:27017/?authSource=admin
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
