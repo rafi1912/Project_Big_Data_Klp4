@@ -35,6 +35,29 @@ def report_dir(cfg: dict, ds_key: str) -> Path:
     return d
 
 
+def landing_path(key: str, cfg: dict | None = None) -> Path:
+    """Folder landing satu dataset, data/landing/<key>/ (diisi scripts/download_datasets.py).
+    Dibaca oleh kedua jalur: pipeline Rafi (ingest.py) dan pipeline analisis."""
+    return path_of(cfg or load_config(), "landing", key)
+
+
+# ---- Zona jalur analisis (src/*_pipeline.py, synthesis.py), diambil dari config.yaml `paths`.
+# Sengaja terpisah dari data/bronze|silver|gold/<key> supaya tidak menimpa keluaran pipeline Rafi.
+_PATHS = load_config()["paths"]
+PROJECT_ROOT = ROOT
+DATA_LANDING = ROOT / _PATHS["landing"]
+DATA_CURATED = ROOT / _PATHS["curated"]
+OUTPUTS = ROOT / _PATHS["outputs"]
+OUT_METRICS = OUTPUTS / "metrics"          # ringkasan per track (JSON, tanpa data per-akun)
+OUT_FIGURES = OUTPUTS / "figures"
+OUT_MODELS = OUTPUTS / "models"
+OUT_PREDICTIONS = OUTPUTS / "predictions"  # skor per akun -> .gitignore
+OUT_POWERBI = OUTPUTS / "powerbi"          # ekspor CSV Power BI -> .gitignore
+
+for _d in (DATA_CURATED, OUT_METRICS, OUT_FIGURES, OUT_MODELS, OUT_PREDICTIONS):
+    _d.mkdir(parents=True, exist_ok=True)
+
+
 def snake(name: str) -> str:
     # '#' di awal nama berarti "jumlah" dan dipertahankan sebagai 'n_': '#tags/post' -> 'n_tags_post'.
     # Tanpa ini '#tags/post' dan 'tags/post' (keduanya ada di dataset Facebook) sama-sama menjadi
