@@ -53,13 +53,16 @@ datasets:
   facebook_spam:
     platform: Facebook
     kaggle: khajahussainsk/facebook-spam-dataset
-    label_column: null
+    label_column: Label
     positive_values: [1]
-    id_columns: []
+    id_columns: [profile id]    # nomor urut profil; berkorelasi dgn label karena file urut per kelas
     text_columns: []
     hashtag_columns: []
     datetime_columns: []
-    note: "600 profil (500 legit, 100 spam), 13 fitur."
+    note: >-
+      600 profil: 497 label 0 / 103 label 1 (bukan 500/100 seperti kartu Kaggle), 13 fitur.
+      PERINGATAN: file tersusun dua blok menurut label (legit dulu, lalu spam), jadi akurasi tinggi
+      di sini terutama mempelajari blok file, bukan perilaku spam. Kasus peringatan, bukan hasil utama.
 
 modeling:
   seed: 42
