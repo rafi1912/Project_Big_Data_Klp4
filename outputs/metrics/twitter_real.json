@@ -1,0 +1,1359 @@
+{
+  "platform": "twitter",
+  "dataset": {
+    "name": "Twitter Human/Bots Dataset (real accounts)",
+    "source": "kaggle: danieltreiman/twitter-human-bots-dataset",
+    "file": "data/landing/twitter_human_bots/twitter_human_bots_dataset.csv",
+    "n_rows": 37438,
+    "label_col": "account_type",
+    "positive_means": "account_type = 'bot' -> 1 = Inauthentic (operational mapping); 'human' -> 0 = Authentic",
+    "role_in_study": "headline X/Twitter result (replaces the synthetic dataset)",
+    "ignored_assets": "profile_images/ and profile_background_images/ JPEG folders"
+  },
+  "class_balance": {
+    "n_authentic": 25013,
+    "n_inauthentic": 12425,
+    "positive_rate": 0.3319
+  },
+  "split": {
+    "method": "stratified_80_20",
+    "seed": 42,
+    "n_train": 29964,
+    "n_test": 7474,
+    "implementation": "common.stratified_split (sampleBy per class, anti-join)",
+    "vendor_split_column": "ignored for the headline; used only in vendor_split_check"
+  },
+  "features": {
+    "used": [
+      "default_profile",
+      "default_profile_image",
+      "geo_enabled",
+      "verified",
+      "log_favourites_count",
+      "log_followers_count",
+      "log_friends_count",
+      "follower_share",
+      "log_average_tweets_per_day",
+      "account_age_days",
+      "has_description",
+      "description_length",
+      "has_location",
+      "lang_onehot"
+    ],
+    "n_assembled_dimensions": 46,
+    "lang_levels_kept": [
+      "__missing__",
+      "af",
+      "ar",
+      "ca",
+      "cy",
+      "da",
+      "de",
+      "en",
+      "es",
+      "et",
+      "fi",
+      "fr",
+      "hr",
+      "id",
+      "it",
+      "ja",
+      "ko",
+      "nl",
+      "no",
+      "pl",
+      "pt",
+      "ro",
+      "ru",
+      "sl",
+      "so",
+      "sv",
+      "sw",
+      "tl",
+      "tr",
+      "vi",
+      "zh-cn"
+    ],
+    "dropped": {
+      "id": "identifier (contract rule 1); also a proxy for creation time",
+      "screen_name": "identifier (contract rule 1)",
+      "Unnamed row index (_c0)": "file row number",
+      "profile_image_url": "URL artifact (string value carries no behaviour)",
+      "profile_background_image_url": "URL artifact; its NULLs encode account era + default_profile",
+      "profile_image_path": "local download path; 35% NULL by download completeness, label-dependent -> leakage risk",
+      "profile_background_image_path": "same as profile_image_path",
+      "split": "vendor's own partition, not an account property",
+      "statuses_count": "= average_tweets_per_day x account_age_days by construction (see collinearity)",
+      "created_at": "= collection date - account_age_days by construction",
+      "description (raw text)": "replaced by has_description and description_length",
+      "location (raw text)": "replaced by has_location",
+      "lang (raw)": "replaced by lang_cat (one-hot)"
+    },
+    "engineered": {
+      "log_favourites_count": "ln(1 + favourites_count)",
+      "log_followers_count": "ln(1 + followers_count)",
+      "log_friends_count": "ln(1 + friends_count)",
+      "follower_share": "(followers_count + 1) / (followers_count + friends_count + 2) = r / (1 + r), r = (followers + 1) / (friends + 1): the followers/friends ratio as a bounded 0-1 share; +1/+2 smoothing guards divide-by-zero (no followers and no friends -> 0.5)",
+      "log_average_tweets_per_day": "ln(1 + average_tweets_per_day)",
+      "has_description": "1 if description is non-empty",
+      "description_length": "characters in description; 0 for an empty bio (true value)",
+      "has_location": "1 if location is set and not the placeholder 'unknown'",
+      "lang_cat": "lang; NULL -> explicit '__missing__' level; levels with < 30 training accounts -> '__other__'; one-hot (dropLast) for both models",
+      "booleans": "default_profile, default_profile_image, geo_enabled, verified: 'True'/'False' -> 1.0/0.0"
+    },
+    "missing_values": {
+      "lang": "21.3% NULL -> its own category '__missing__' (informative: 13.8% of humans, 36.2% of bots)",
+      "description": "19.4% NULL = empty bio -> has_description 0, length 0",
+      "location": "4 NULL + 34.8% 'unknown' placeholder -> has_location 0",
+      "all model inputs": "asserted NULL-free after the rules above; nothing zero-filled"
+    },
+    "collinearity": {
+      "identity_tested": "statuses_count == average_tweets_per_day * account_age_days",
+      "pearson_r_statuses_vs_rate_x_age": 1.0,
+      "share_rows_exact_within_rounding": 1.0,
+      "median_relative_error": 0.000126,
+      "log_space_regression": {
+        "model": "ln(statuses) = b0 + b1 ln(rate) + b2 ln(age)",
+        "rows_with_all_positive": 29909,
+        "r2": 0.999929,
+        "b1_ln_rate": 1.0003,
+        "b2_ln_age": 1.0,
+        "implied_vif_of_ln_statuses": 14017.4
+      },
+      "vif_with_statuses_count": {
+        "log_favourites_count": 1.63,
+        "log_followers_count": 6.05,
+        "log_friends_count": 5.6,
+        "follower_share": 4.56,
+        "log_average_tweets_per_day": 5.61,
+        "account_age_days": 1.56,
+        "has_description": 1.64,
+        "description_length": 1.71,
+        "has_location": 1.26,
+        "log_statuses_count": 6.93
+      },
+      "vif_used_feature_set": {
+        "log_favourites_count": 1.5,
+        "log_followers_count": 5.91,
+        "log_friends_count": 5.59,
+        "follower_share": 4.53,
+        "log_average_tweets_per_day": 1.67,
+        "account_age_days": 1.33,
+        "has_description": 1.63,
+        "description_length": 1.71,
+        "has_location": 1.24
+      },
+      "ratio_redesign": {
+        "first_version": "ln((followers + 1) / (friends + 1))",
+        "problem": "identical to log_followers_count - log_friends_count, an exact linear combination of two other features (found by this VIF check)",
+        "vif_first_version": {
+          "log_followers_count": "inf (exact linear combination)",
+          "log_friends_count": "inf (exact linear combination)",
+          "_ratio_log_v1": "inf (exact linear combination)"
+        },
+        "fix": "follower_share = r / (1 + r); same ordering as the ratio (so Random Forest splits are unchanged) but no longer a linear combination of the logs"
+      },
+      "rf_impurity_importance_with_all_three": {
+        "log_statuses_count": 0.0702,
+        "log_average_tweets_per_day": 0.0739,
+        "account_age_days": 0.0544
+      },
+      "rf_impurity_rank_with_all_three": {
+        "log_statuses_count": 5,
+        "log_average_tweets_per_day": 4,
+        "account_age_days": 8
+      },
+      "rf_inner_validation_roc_auc": {
+        "with_all_three": 0.9266,
+        "without_statuses (used)": 0.9241,
+        "scope": "80:20 stratified split inside the training data; test split not used"
+      },
+      "lr_bootstrap_coefficients": {
+        "with_all_three": {
+          "log_statuses_count": {
+            "mean": -0.0862,
+            "sd": 0.0229,
+            "min": -0.1042,
+            "max": -0.0424
+          },
+          "log_average_tweets_per_day": {
+            "mean": 0.6523,
+            "sd": 0.039,
+            "min": 0.5876,
+            "max": 0.6886
+          },
+          "account_age_days": {
+            "mean": 0.1702,
+            "sd": 0.0159,
+            "min": 0.1478,
+            "max": 0.1907
+          }
+        },
+        "without_statuses (used)": {
+          "log_average_tweets_per_day": {
+            "mean": 0.5886,
+            "sd": 0.0274,
+            "min": 0.5542,
+            "max": 0.616
+          },
+          "account_age_days": {
+            "mean": 0.1555,
+            "sd": 0.0176,
+            "min": 0.133,
+            "max": 0.1769
+          }
+        }
+      },
+      "decision": "Dropped statuses_count. It is the product of the other two by construction, so it adds no information. Kept average_tweets_per_day (activity intensity) and account_age_days (account maturity), which are nearly unrelated to each other in log space."
+    },
+    "class_weights": {
+      "0": 0.7479,
+      "1": 1.5085,
+      "train_counts": {
+        "1": 9932,
+        "0": 20032
+      },
+      "formula": "n_train / (2 * n_class)"
+    }
+  },
+  "models": {
+    "random_forest": {
+      "params": {
+        "numTrees": 150,
+        "featureSubsetStrategy": "sqrt",
+        "impurity": "gini",
+        "maxBins": 32,
+        "minInstancesPerNode": 5,
+        "subsamplingRate": 1.0,
+        "bootstrap": true,
+        "seed": 42,
+        "maxDepth": 20,
+        "weightCol": "weight (inverse class frequency, train)",
+        "labelCol": "label",
+        "n_trees_fitted": 150,
+        "total_nodes": 177794
+      },
+      "cross_validation": {
+        "folds": 3,
+        "metric": "areaUnderPR",
+        "seed": 42,
+        "scope": "inside training split only",
+        "grid": [
+          {
+            "maxDepth": 8,
+            "cv_mean_areaUnderPR": 0.8401,
+            "cv_std_areaUnderPR": 0.0015
+          },
+          {
+            "maxDepth": 12,
+            "cv_mean_areaUnderPR": 0.8698,
+            "cv_std_areaUnderPR": 0.0034
+          },
+          {
+            "maxDepth": 16,
+            "cv_mean_areaUnderPR": 0.8777,
+            "cv_std_areaUnderPR": 0.004
+          },
+          {
+            "maxDepth": 20,
+            "cv_mean_areaUnderPR": 0.8792,
+            "cv_std_areaUnderPR": 0.004
+          }
+        ],
+        "selected": {
+          "maxDepth": 20
+        }
+      },
+      "metrics": {
+        "confusion_matrix": {
+          "true_negative": 4381,
+          "false_positive": 600,
+          "false_negative": 493,
+          "true_positive": 2000
+        },
+        "n_test": 7474,
+        "accuracy": 0.8538,
+        "precision_positive": 0.7692,
+        "recall_positive": 0.8022,
+        "f1_positive": 0.7854,
+        "specificity": 0.8795,
+        "balanced_accuracy": 0.8409,
+        "mcc": 0.6749,
+        "roc_auc": 0.9231,
+        "pr_auc": 0.8798,
+        "baseline_majority_class": {
+          "predicts": 0,
+          "accuracy": 0.6664,
+          "accuracy_lift_of_model": 0.1874
+        },
+        "accuracy_wilson_95ci": [
+          0.8456,
+          0.8616
+        ],
+        "roc_auc_no_signal_95band": [
+          0.4861,
+          0.5139
+        ],
+        "pr_auc_no_signal_reference": 0.3336,
+        "review_queue": [
+          {
+            "top_fraction": 0.05,
+            "k_accounts": 374,
+            "precision_at_k": 0.9947,
+            "recall_at_k": 0.1492,
+            "base_rate": 0.3336
+          },
+          {
+            "top_fraction": 0.1,
+            "k_accounts": 747,
+            "precision_at_k": 0.9826,
+            "recall_at_k": 0.2944,
+            "base_rate": 0.3336
+          },
+          {
+            "top_fraction": 0.2,
+            "k_accounts": 1495,
+            "precision_at_k": 0.9204,
+            "recall_at_k": 0.5519,
+            "base_rate": 0.3336
+          }
+        ],
+        "decision_threshold": 0.5,
+        "threshold_note": "0.5 on class-weighted models (equivalent to a balanced-prior cut-off)"
+      },
+      "feature_importance": [
+        {
+          "feature": "log_followers_count",
+          "importance": 0.221144,
+          "rank": 1
+        },
+        {
+          "feature": "log_favourites_count",
+          "importance": 0.167062,
+          "rank": 2
+        },
+        {
+          "feature": "log_friends_count",
+          "importance": 0.143962,
+          "rank": 3
+        },
+        {
+          "feature": "log_average_tweets_per_day",
+          "importance": 0.092344,
+          "rank": 4
+        },
+        {
+          "feature": "verified",
+          "importance": 0.063819,
+          "rank": 5
+        },
+        {
+          "feature": "follower_share",
+          "importance": 0.059672,
+          "rank": 6
+        },
+        {
+          "feature": "account_age_days",
+          "importance": 0.058474,
+          "rank": 7
+        },
+        {
+          "feature": "geo_enabled",
+          "importance": 0.049852,
+          "rank": 8
+        },
+        {
+          "feature": "description_length",
+          "importance": 0.040569,
+          "rank": 9
+        },
+        {
+          "feature": "default_profile",
+          "importance": 0.021796,
+          "rank": 10
+        },
+        {
+          "feature": "lang=en",
+          "importance": 0.015437,
+          "rank": 11
+        },
+        {
+          "feature": "has_description",
+          "importance": 0.013984,
+          "rank": 12
+        },
+        {
+          "feature": "lang=__missing__",
+          "importance": 0.011188,
+          "rank": 13
+        },
+        {
+          "feature": "has_location",
+          "importance": 0.009995,
+          "rank": 14
+        },
+        {
+          "feature": "lang=ar",
+          "importance": 0.00702,
+          "rank": 15
+        },
+        {
+          "feature": "lang=ru",
+          "importance": 0.006301,
+          "rank": 16
+        },
+        {
+          "feature": "lang=ja",
+          "importance": 0.004671,
+          "rank": 17
+        },
+        {
+          "feature": "lang=es",
+          "importance": 0.00194,
+          "rank": 18
+        },
+        {
+          "feature": "lang=pt",
+          "importance": 0.001539,
+          "rank": 19
+        },
+        {
+          "feature": "lang=it",
+          "importance": 0.001031,
+          "rank": 20
+        },
+        {
+          "feature": "default_profile_image",
+          "importance": 0.000857,
+          "rank": 21
+        },
+        {
+          "feature": "lang=de",
+          "importance": 0.000836,
+          "rank": 22
+        },
+        {
+          "feature": "lang=id",
+          "importance": 0.000818,
+          "rank": 23
+        },
+        {
+          "feature": "lang=__other__",
+          "importance": 0.00077,
+          "rank": 24
+        },
+        {
+          "feature": "lang=af",
+          "importance": 0.000669,
+          "rank": 25
+        },
+        {
+          "feature": "lang=fr",
+          "importance": 0.00063,
+          "rank": 26
+        },
+        {
+          "feature": "lang=ko",
+          "importance": 0.000389,
+          "rank": 27
+        },
+        {
+          "feature": "lang=tr",
+          "importance": 0.000384,
+          "rank": 28
+        },
+        {
+          "feature": "lang=ca",
+          "importance": 0.000284,
+          "rank": 29
+        },
+        {
+          "feature": "lang=no",
+          "importance": 0.000272,
+          "rank": 30
+        },
+        {
+          "feature": "lang=sw",
+          "importance": 0.000269,
+          "rank": 31
+        },
+        {
+          "feature": "lang=da",
+          "importance": 0.000265,
+          "rank": 32
+        },
+        {
+          "feature": "lang=ro",
+          "importance": 0.000249,
+          "rank": 33
+        },
+        {
+          "feature": "lang=tl",
+          "importance": 0.000212,
+          "rank": 34
+        },
+        {
+          "feature": "lang=et",
+          "importance": 0.00021,
+          "rank": 35
+        },
+        {
+          "feature": "lang=zh-cn",
+          "importance": 0.000169,
+          "rank": 36
+        },
+        {
+          "feature": "lang=cy",
+          "importance": 0.000162,
+          "rank": 37
+        },
+        {
+          "feature": "lang=nl",
+          "importance": 0.00015,
+          "rank": 38
+        },
+        {
+          "feature": "lang=sv",
+          "importance": 0.000135,
+          "rank": 39
+        },
+        {
+          "feature": "lang=so",
+          "importance": 0.000123,
+          "rank": 40
+        },
+        {
+          "feature": "lang=vi",
+          "importance": 0.00012,
+          "rank": 41
+        },
+        {
+          "feature": "lang=fi",
+          "importance": 7.4e-05,
+          "rank": 42
+        },
+        {
+          "feature": "lang=sl",
+          "importance": 6.8e-05,
+          "rank": 43
+        },
+        {
+          "feature": "lang=pl",
+          "importance": 5.8e-05,
+          "rank": 44
+        },
+        {
+          "feature": "lang=hr",
+          "importance": 2.9e-05,
+          "rank": 45
+        },
+        {
+          "feature": "lang=__unknown",
+          "importance": 0.0,
+          "rank": 46
+        }
+      ],
+      "permutation_importance": [
+        {
+          "feature": "log_favourites_count",
+          "columns": [
+            "log_favourites_count"
+          ],
+          "roc_auc_drop_mean": 0.056038,
+          "roc_auc_drop_std": 0.001503,
+          "pr_auc_drop_mean": 0.094154,
+          "pr_auc_drop_std": 0.002599,
+          "rank": 1
+        },
+        {
+          "feature": "log_followers_count",
+          "columns": [
+            "log_followers_count"
+          ],
+          "roc_auc_drop_mean": 0.047286,
+          "roc_auc_drop_std": 0.00114,
+          "pr_auc_drop_mean": 0.09819,
+          "pr_auc_drop_std": 0.004976,
+          "rank": 2
+        },
+        {
+          "feature": "log_friends_count",
+          "columns": [
+            "log_friends_count"
+          ],
+          "roc_auc_drop_mean": 0.027285,
+          "roc_auc_drop_std": 0.00182,
+          "pr_auc_drop_mean": 0.050161,
+          "pr_auc_drop_std": 0.001193,
+          "rank": 3
+        },
+        {
+          "feature": "log_average_tweets_per_day",
+          "columns": [
+            "log_average_tweets_per_day"
+          ],
+          "roc_auc_drop_mean": 0.025965,
+          "roc_auc_drop_std": 0.000996,
+          "pr_auc_drop_mean": 0.040452,
+          "pr_auc_drop_std": 0.002413,
+          "rank": 4
+        },
+        {
+          "feature": "account_age_days",
+          "columns": [
+            "account_age_days"
+          ],
+          "roc_auc_drop_mean": 0.016777,
+          "roc_auc_drop_std": 0.000594,
+          "pr_auc_drop_mean": 0.03097,
+          "pr_auc_drop_std": 0.001408,
+          "rank": 5
+        },
+        {
+          "feature": "verified",
+          "columns": [
+            "verified"
+          ],
+          "roc_auc_drop_mean": 0.014871,
+          "roc_auc_drop_std": 0.001054,
+          "pr_auc_drop_mean": 0.021487,
+          "pr_auc_drop_std": 0.001693,
+          "rank": 6
+        },
+        {
+          "feature": "follower_share",
+          "columns": [
+            "follower_share"
+          ],
+          "roc_auc_drop_mean": 0.00976,
+          "roc_auc_drop_std": 0.000379,
+          "pr_auc_drop_mean": 0.016143,
+          "pr_auc_drop_std": 0.001037,
+          "rank": 7
+        },
+        {
+          "feature": "lang (all levels)",
+          "columns": [
+            "lang_cat"
+          ],
+          "roc_auc_drop_mean": 0.008679,
+          "roc_auc_drop_std": 0.000796,
+          "pr_auc_drop_mean": 0.012138,
+          "pr_auc_drop_std": 0.001354,
+          "rank": 8
+        },
+        {
+          "feature": "geo_enabled",
+          "columns": [
+            "geo_enabled"
+          ],
+          "roc_auc_drop_mean": 0.007592,
+          "roc_auc_drop_std": 0.000944,
+          "pr_auc_drop_mean": 0.015139,
+          "pr_auc_drop_std": 0.001281,
+          "rank": 9
+        },
+        {
+          "feature": "has_location",
+          "columns": [
+            "has_location"
+          ],
+          "roc_auc_drop_mean": 0.004712,
+          "roc_auc_drop_std": 0.000277,
+          "pr_auc_drop_mean": 0.006053,
+          "pr_auc_drop_std": 0.000699,
+          "rank": 10
+        },
+        {
+          "feature": "default_profile",
+          "columns": [
+            "default_profile"
+          ],
+          "roc_auc_drop_mean": 0.00309,
+          "roc_auc_drop_std": 0.000246,
+          "pr_auc_drop_mean": 0.007469,
+          "pr_auc_drop_std": 0.000778,
+          "rank": 11
+        },
+        {
+          "feature": "description_length",
+          "columns": [
+            "description_length"
+          ],
+          "roc_auc_drop_mean": 0.001639,
+          "roc_auc_drop_std": 0.000339,
+          "pr_auc_drop_mean": 0.003776,
+          "pr_auc_drop_std": 0.000715,
+          "rank": 12
+        },
+        {
+          "feature": "default_profile_image",
+          "columns": [
+            "default_profile_image"
+          ],
+          "roc_auc_drop_mean": 9.8e-05,
+          "roc_auc_drop_std": 5.1e-05,
+          "pr_auc_drop_mean": 0.000166,
+          "pr_auc_drop_std": 0.000137,
+          "rank": 13
+        },
+        {
+          "feature": "has_description",
+          "columns": [
+            "has_description"
+          ],
+          "roc_auc_drop_mean": -0.000115,
+          "roc_auc_drop_std": 0.000377,
+          "pr_auc_drop_mean": -0.000827,
+          "pr_auc_drop_std": 0.000537,
+          "rank": 14
+        }
+      ],
+      "permutation_importance_meta": {
+        "baseline_roc_auc_sklearn": 0.9231,
+        "baseline_avg_precision_sklearn": 0.8799,
+        "repeats": 5,
+        "seed": 42,
+        "evaluated_on": "held-out test split",
+        "metric_impl": "sklearn roc_auc_score / average_precision_score on Spark-scored probabilities"
+      },
+      "lang_onehot_importance_sum": 0.056472
+    },
+    "logistic_regression": {
+      "params": {
+        "maxIter": 200,
+        "elasticNetParam": 0.0,
+        "standardization": true,
+        "threshold": 0.5,
+        "family": "binomial",
+        "regParam": 0.001,
+        "weightCol": "weight (inverse class frequency, train)",
+        "scaler": {
+          "type": "StandardScaler",
+          "withMean": false,
+          "withStd": true
+        },
+        "coefficients_are_on": "standardised features (per 1 SD)",
+        "intercept": 3.432104
+      },
+      "cross_validation": {
+        "folds": 3,
+        "metric": "areaUnderPR",
+        "seed": 42,
+        "scope": "inside training split only",
+        "grid": [
+          {
+            "regParam": 0.001,
+            "cv_mean_areaUnderPR": 0.721,
+            "cv_std_areaUnderPR": 0.0078
+          },
+          {
+            "regParam": 0.01,
+            "cv_mean_areaUnderPR": 0.7202,
+            "cv_std_areaUnderPR": 0.0074
+          },
+          {
+            "regParam": 0.1,
+            "cv_mean_areaUnderPR": 0.7075,
+            "cv_std_areaUnderPR": 0.0076
+          }
+        ],
+        "selected": {
+          "regParam": 0.001
+        }
+      },
+      "metrics": {
+        "confusion_matrix": {
+          "true_negative": 3901,
+          "false_positive": 1080,
+          "false_negative": 507,
+          "true_positive": 1986
+        },
+        "n_test": 7474,
+        "accuracy": 0.7877,
+        "precision_positive": 0.6477,
+        "recall_positive": 0.7966,
+        "f1_positive": 0.7145,
+        "specificity": 0.7832,
+        "balanced_accuracy": 0.7899,
+        "mcc": 0.5558,
+        "roc_auc": 0.8458,
+        "pr_auc": 0.7109,
+        "baseline_majority_class": {
+          "predicts": 0,
+          "accuracy": 0.6664,
+          "accuracy_lift_of_model": 0.1213
+        },
+        "accuracy_wilson_95ci": [
+          0.7782,
+          0.7968
+        ],
+        "roc_auc_no_signal_95band": [
+          0.4861,
+          0.5139
+        ],
+        "pr_auc_no_signal_reference": 0.3336,
+        "review_queue": [
+          {
+            "top_fraction": 0.05,
+            "k_accounts": 374,
+            "precision_at_k": 0.8128,
+            "recall_at_k": 0.1219,
+            "base_rate": 0.3336
+          },
+          {
+            "top_fraction": 0.1,
+            "k_accounts": 747,
+            "precision_at_k": 0.7631,
+            "recall_at_k": 0.2286,
+            "base_rate": 0.3336
+          },
+          {
+            "top_fraction": 0.2,
+            "k_accounts": 1495,
+            "precision_at_k": 0.7478,
+            "recall_at_k": 0.4485,
+            "base_rate": 0.3336
+          }
+        ],
+        "decision_threshold": 0.5,
+        "threshold_note": "0.5 on class-weighted models (equivalent to a balanced-prior cut-off)"
+      },
+      "feature_importance": [
+        {
+          "feature": "log_followers_count",
+          "coefficient": -0.889109,
+          "rank": 1
+        },
+        {
+          "feature": "log_average_tweets_per_day",
+          "coefficient": 0.571277,
+          "rank": 2
+        },
+        {
+          "feature": "log_favourites_count",
+          "coefficient": -0.485364,
+          "rank": 3
+        },
+        {
+          "feature": "log_friends_count",
+          "coefficient": -0.425273,
+          "rank": 4
+        },
+        {
+          "feature": "geo_enabled",
+          "coefficient": -0.405326,
+          "rank": 5
+        },
+        {
+          "feature": "has_description",
+          "coefficient": -0.360413,
+          "rank": 6
+        },
+        {
+          "feature": "verified",
+          "coefficient": -0.347388,
+          "rank": 7
+        },
+        {
+          "feature": "lang=ru",
+          "coefficient": -0.242422,
+          "rank": 8
+        },
+        {
+          "feature": "lang=ar",
+          "coefficient": 0.175081,
+          "rank": 9
+        },
+        {
+          "feature": "default_profile",
+          "coefficient": 0.170558,
+          "rank": 10
+        },
+        {
+          "feature": "account_age_days",
+          "coefficient": 0.163872,
+          "rank": 11
+        },
+        {
+          "feature": "lang=es",
+          "coefficient": 0.124651,
+          "rank": 12
+        },
+        {
+          "feature": "default_profile_image",
+          "coefficient": -0.099903,
+          "rank": 13
+        },
+        {
+          "feature": "lang=__missing__",
+          "coefficient": -0.082867,
+          "rank": 14
+        },
+        {
+          "feature": "follower_share",
+          "coefficient": -0.080188,
+          "rank": 15
+        },
+        {
+          "feature": "lang=ja",
+          "coefficient": 0.074391,
+          "rank": 16
+        },
+        {
+          "feature": "lang=af",
+          "coefficient": 0.073885,
+          "rank": 17
+        },
+        {
+          "feature": "lang=ko",
+          "coefficient": 0.071682,
+          "rank": 18
+        },
+        {
+          "feature": "lang=zh-cn",
+          "coefficient": 0.066325,
+          "rank": 19
+        },
+        {
+          "feature": "lang=sw",
+          "coefficient": 0.065723,
+          "rank": 20
+        },
+        {
+          "feature": "lang=__other__",
+          "coefficient": -0.056833,
+          "rank": 21
+        },
+        {
+          "feature": "description_length",
+          "coefficient": -0.056691,
+          "rank": 22
+        },
+        {
+          "feature": "lang=en",
+          "coefficient": -0.055052,
+          "rank": 23
+        },
+        {
+          "feature": "lang=tr",
+          "coefficient": 0.054345,
+          "rank": 24
+        },
+        {
+          "feature": "lang=pt",
+          "coefficient": 0.034225,
+          "rank": 25
+        },
+        {
+          "feature": "lang=da",
+          "coefficient": -0.033936,
+          "rank": 26
+        },
+        {
+          "feature": "lang=de",
+          "coefficient": -0.033363,
+          "rank": 27
+        },
+        {
+          "feature": "lang=fr",
+          "coefficient": 0.029989,
+          "rank": 28
+        },
+        {
+          "feature": "lang=sv",
+          "coefficient": -0.021807,
+          "rank": 29
+        },
+        {
+          "feature": "has_location",
+          "coefficient": -0.018313,
+          "rank": 30
+        },
+        {
+          "feature": "lang=vi",
+          "coefficient": 0.014302,
+          "rank": 31
+        },
+        {
+          "feature": "lang=tl",
+          "coefficient": -0.014001,
+          "rank": 32
+        },
+        {
+          "feature": "lang=id",
+          "coefficient": 0.013694,
+          "rank": 33
+        },
+        {
+          "feature": "lang=so",
+          "coefficient": 0.012669,
+          "rank": 34
+        },
+        {
+          "feature": "lang=fi",
+          "coefficient": 0.012351,
+          "rank": 35
+        },
+        {
+          "feature": "lang=sl",
+          "coefficient": 0.009864,
+          "rank": 36
+        },
+        {
+          "feature": "lang=cy",
+          "coefficient": 0.007385,
+          "rank": 37
+        },
+        {
+          "feature": "lang=pl",
+          "coefficient": -0.006415,
+          "rank": 38
+        },
+        {
+          "feature": "lang=no",
+          "coefficient": 0.006163,
+          "rank": 39
+        },
+        {
+          "feature": "lang=ca",
+          "coefficient": 0.005779,
+          "rank": 40
+        },
+        {
+          "feature": "lang=it",
+          "coefficient": -0.005575,
+          "rank": 41
+        },
+        {
+          "feature": "lang=et",
+          "coefficient": -0.005193,
+          "rank": 42
+        },
+        {
+          "feature": "lang=hr",
+          "coefficient": 0.004396,
+          "rank": 43
+        },
+        {
+          "feature": "lang=ro",
+          "coefficient": 0.001891,
+          "rank": 44
+        },
+        {
+          "feature": "lang=nl",
+          "coefficient": -0.001809,
+          "rank": 45
+        },
+        {
+          "feature": "lang=__unknown",
+          "coefficient": 0.0,
+          "rank": 46
+        }
+      ],
+      "permutation_importance": [
+        {
+          "feature": "log_followers_count",
+          "columns": [
+            "log_followers_count"
+          ],
+          "roc_auc_drop_mean": 0.097201,
+          "roc_auc_drop_std": 0.002125,
+          "pr_auc_drop_mean": 0.115771,
+          "pr_auc_drop_std": 0.005285,
+          "rank": 1
+        },
+        {
+          "feature": "log_favourites_count",
+          "columns": [
+            "log_favourites_count"
+          ],
+          "roc_auc_drop_mean": 0.032058,
+          "roc_auc_drop_std": 0.00125,
+          "pr_auc_drop_mean": 0.031292,
+          "pr_auc_drop_std": 0.003379,
+          "rank": 2
+        },
+        {
+          "feature": "log_friends_count",
+          "columns": [
+            "log_friends_count"
+          ],
+          "roc_auc_drop_mean": 0.020999,
+          "roc_auc_drop_std": 0.001913,
+          "pr_auc_drop_mean": 0.028135,
+          "pr_auc_drop_std": 0.002903,
+          "rank": 3
+        },
+        {
+          "feature": "log_average_tweets_per_day",
+          "columns": [
+            "log_average_tweets_per_day"
+          ],
+          "roc_auc_drop_mean": 0.0199,
+          "roc_auc_drop_std": 0.001494,
+          "pr_auc_drop_mean": 0.037252,
+          "pr_auc_drop_std": 0.001998,
+          "rank": 4
+        },
+        {
+          "feature": "geo_enabled",
+          "columns": [
+            "geo_enabled"
+          ],
+          "roc_auc_drop_mean": 0.019339,
+          "roc_auc_drop_std": 0.001682,
+          "pr_auc_drop_mean": 0.029396,
+          "pr_auc_drop_std": 0.002922,
+          "rank": 5
+        },
+        {
+          "feature": "lang (all levels)",
+          "columns": [
+            "lang_cat"
+          ],
+          "roc_auc_drop_mean": 0.017094,
+          "roc_auc_drop_std": 0.00172,
+          "pr_auc_drop_mean": 0.03783,
+          "pr_auc_drop_std": 0.004919,
+          "rank": 6
+        },
+        {
+          "feature": "has_description",
+          "columns": [
+            "has_description"
+          ],
+          "roc_auc_drop_mean": 0.013274,
+          "roc_auc_drop_std": 0.001821,
+          "pr_auc_drop_mean": 0.02793,
+          "pr_auc_drop_std": 0.003892,
+          "rank": 7
+        },
+        {
+          "feature": "verified",
+          "columns": [
+            "verified"
+          ],
+          "roc_auc_drop_mean": 0.009444,
+          "roc_auc_drop_std": 0.000686,
+          "pr_auc_drop_mean": 0.009011,
+          "pr_auc_drop_std": 0.001332,
+          "rank": 8
+        },
+        {
+          "feature": "account_age_days",
+          "columns": [
+            "account_age_days"
+          ],
+          "roc_auc_drop_mean": 0.002853,
+          "roc_auc_drop_std": 0.000381,
+          "pr_auc_drop_mean": 0.007245,
+          "pr_auc_drop_std": 0.001158,
+          "rank": 9
+        },
+        {
+          "feature": "default_profile",
+          "columns": [
+            "default_profile"
+          ],
+          "roc_auc_drop_mean": 0.002294,
+          "roc_auc_drop_std": 0.000334,
+          "pr_auc_drop_mean": 0.005873,
+          "pr_auc_drop_std": 0.001099,
+          "rank": 10
+        },
+        {
+          "feature": "follower_share",
+          "columns": [
+            "follower_share"
+          ],
+          "roc_auc_drop_mean": 0.001232,
+          "roc_auc_drop_std": 0.00024,
+          "pr_auc_drop_mean": 0.001931,
+          "pr_auc_drop_std": 0.00031,
+          "rank": 11
+        },
+        {
+          "feature": "description_length",
+          "columns": [
+            "description_length"
+          ],
+          "roc_auc_drop_mean": 0.000321,
+          "roc_auc_drop_std": 0.000188,
+          "pr_auc_drop_mean": 0.000968,
+          "pr_auc_drop_std": 0.00061,
+          "rank": 12
+        },
+        {
+          "feature": "default_profile_image",
+          "columns": [
+            "default_profile_image"
+          ],
+          "roc_auc_drop_mean": 0.000102,
+          "roc_auc_drop_std": 0.00023,
+          "pr_auc_drop_mean": 0.001263,
+          "pr_auc_drop_std": 0.000749,
+          "rank": 13
+        },
+        {
+          "feature": "has_location",
+          "columns": [
+            "has_location"
+          ],
+          "roc_auc_drop_mean": 2e-06,
+          "roc_auc_drop_std": 2.8e-05,
+          "pr_auc_drop_mean": -0.000259,
+          "pr_auc_drop_std": 0.000159,
+          "rank": 14
+        }
+      ],
+      "permutation_importance_meta": {
+        "baseline_roc_auc_sklearn": 0.8458,
+        "baseline_avg_precision_sklearn": 0.7111,
+        "repeats": 5,
+        "seed": 42,
+        "evaluated_on": "held-out test split",
+        "metric_impl": "sklearn roc_auc_score / average_precision_score on Spark-scored probabilities"
+      }
+    }
+  },
+  "vendor_split_check": {
+    "train_rows": 29950,
+    "eval_rows": 7488,
+    "train_definition": "vendor split == 0",
+    "eval_definition": "vendor split in {1, 2}",
+    "hyperparameters": "CV-selected on the stratified split; no re-tuning",
+    "class_weights": {
+      "0": 0.7481,
+      "1": 1.5078,
+      "train_counts": {
+        "1": 9932,
+        "0": 20018
+      },
+      "formula": "n_train / (2 * n_class)"
+    },
+    "random_forest": {
+      "accuracy": 0.8548,
+      "precision_positive": 0.7718,
+      "recall_positive": 0.8006,
+      "f1_positive": 0.786,
+      "balanced_accuracy": 0.8413,
+      "mcc": 0.6765,
+      "roc_auc": 0.9252,
+      "pr_auc": 0.8818,
+      "baseline_accuracy": 0.6671
+    },
+    "logistic_regression": {
+      "accuracy": 0.7947,
+      "precision_positive": 0.6599,
+      "recall_positive": 0.7914,
+      "f1_positive": 0.7197,
+      "balanced_accuracy": 0.7939,
+      "mcc": 0.5656,
+      "roc_auc": 0.8528,
+      "pr_auc": 0.7217,
+      "baseline_accuracy": 0.6671
+    }
+  },
+  "leakage_audit": {
+    "checks_run": [
+      "identifier columns (id, screen_name, unnamed row index) excluded from features",
+      "row order vs label and adjacent-label agreement (sorted-file check)",
+      "id rank correlation with label, explained against account creation time",
+      "exact duplicate rows; test feature vectors identical to a train feature vector",
+      "single-feature ROC-AUC scan on TRAIN (alarm if > 0.95)",
+      "label-dependent missingness in dropped artifact columns (image paths, background URL)",
+      "construction redundancy: statuses = rate x age, account_age_days = collection date - created_at",
+      "lang levels learned from TRAIN only",
+      "near-99% check: headline accuracy below 0.95, so no ceiling audit was triggered",
+      "secondary evaluation on the vendor's own split"
+    ],
+    "order_checks": [
+      {
+        "check": "row_order_vs_label",
+        "pointbiserial_r": -0.001,
+        "p_value": 0.8539,
+        "verdict": "not sorted by label"
+      },
+      {
+        "check": "adjacent_label_agreement",
+        "observed": 0.5617,
+        "expected_if_shuffled": 0.5565,
+        "verdict": "consistent with unsorted file"
+      },
+      {
+        "check": "id_rank_correlation_with_label",
+        "spearman_rho": 0.23,
+        "note": "identifier is excluded from features regardless"
+      }
+    ],
+    "id_vs_created_at_spearman": 0.9999,
+    "exact_duplicate_rows": 0,
+    "test_rows_with_feature_vector_identical_to_a_train_row": 1,
+    "single_feature_auc_train": {
+      "log_followers_count": 0.8103,
+      "log_friends_count": 0.7639,
+      "log_favourites_count": 0.6972,
+      "log_statuses_count": 0.6876,
+      "geo_enabled": 0.6785,
+      "log_average_tweets_per_day": 0.6688,
+      "description_length": 0.6671,
+      "default_profile": 0.6542,
+      "account_age_days": 0.6409,
+      "verified": 0.6323,
+      "has_description": 0.6199,
+      "has_location": 0.6173,
+      "follower_share": 0.5954,
+      "default_profile_image": 0.5114
+    },
+    "profile_image_file_missing_rate_by_label": {
+      "authentic": 0.4566,
+      "inauthentic": 0.1222
+    },
+    "profile_image_file_missing_single_flag_auc_train": 0.6693,
+    "background_url_missing_rate_by_default_profile": {
+      "False": 0.0,
+      "True": 0.2862
+    },
+    "background_url_missing_rate_by_created_year": {
+      "2006": 0.0,
+      "2007": 0.0,
+      "2008": 0.0,
+      "2009": 0.0,
+      "2010": 0.0,
+      "2011": 0.0,
+      "2012": 0.0,
+      "2013": 0.0,
+      "2014": 0.0,
+      "2015": 0.0332,
+      "2016": 0.7957,
+      "2017": 0.8213,
+      "2018": 0.7138,
+      "2019": 0.4483
+    },
+    "implied_collection_window": [
+      "2020-08-18 10:54:58",
+      "2020-08-19 10:57:36"
+    ],
+    "findings": [
+      "File is not sorted by label (row-order r ~ 0, adjacent-label agreement equals the shuffled expectation).",
+      "id correlates with the label (Spearman 0.23) only because Twitter ids are issued in time order (id vs created_at Spearman 0.9999) and bots in this sample are younger accounts. That information is already in account_age_days; id is excluded as an identifier.",
+      "profile_image_path / profile_background_image_path are missing for 45.7% of humans but 12.2% of bots - a download-completeness artifact correlated with the label (single-flag AUC 0.6693). Using it would be leakage; dropped.",
+      "profile_background_image_url is NULL only for default-profile accounts created from 2015 on (Twitter stopped assigning background themes), so it encodes account era plus default_profile, both already present. Dropped.",
+      "Highest single-feature train AUC is 0.8103 (log_followers_count) - no feature alone gives the answer away.",
+      "statuses_count equals average_tweets_per_day x account_age_days for 100.0% of training rows (collinearity by construction, not label leakage); handled by dropping statuses_count.",
+      "created_at is redundant with account_age_days (collection on 2020-08-18 - 2020-08-19); dropped.",
+      "Headline RF accuracy 0.8538 is far from 99%; the vendor split gives 0.8548, consistent with the stratified split."
+    ]
+  },
+  "limitations": [
+    "Labels come from the dataset author's sources (earlier annotated bot collections), not from Twitter; 'bot' here is not the same concept as Facebook 'spam' or Instagram 'fake'. 0/1 is an operational mapping.",
+    "Snapshot collected around 2020-08-18/19 via the old v1.1 API; account behaviour and the platform (now X) have changed since. Do not expect the same performance on today's accounts.",
+    "Bots in this sample are younger, have fewer followers and emptier profiles; a bot operator who fills in a profile and buys followers would not look like these bots.",
+    "Profile metadata only - no tweet content, timing or network features.",
+    "lang missingness is informative but may partly reflect how the author collected the data rather than account behaviour.",
+    "Class weighting at a 0.5 threshold trades precision for recall. False positives are real people: scores are a review queue for trust-and-safety moderators, never an automated sanction."
+  ],
+  "_generated_at": "2026-11-07T18:40:01.521771+00:00",
+  "_track": "twitter_real"
+}

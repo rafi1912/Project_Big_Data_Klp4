@@ -65,6 +65,32 @@ dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashbo
   cd src && python process.py && python train.py
   ```
 
+## Dua jalur pemodelan (penting dibaca sebelum mengutip angka)
+Repo ini punya dua jalur pemodelan di atas `data/landing/` yang sama, dengan peran berbeda
+([ADR 0006](docs/adr/0006-common-module-and-two-modelling-paths.md)):
+
+| Jalur | Skrip | Prosedur | Peran |
+|---|---|---|---|
+| **Operasional** | `ingest.py → process.py → train.py → stream.py` | split 70/15/15, LR/RF/GBT dipilih di data validasi | menjalankan data lake, streaming, dan dashboard |
+| **Analisis** | `*_pipeline.py` + `synthesis.py` | split berstrata 80:20 (seed 42), RF + LR, CV di dalam data latih, audit leakage | **menghasilkan setiap angka di [laporan akhir](docs/FINAL_REPORT.md)** |
+
+Angka di halaman *Model & Evaluasi* dashboard berasal dari jalur operasional dan bisa sedikit berbeda dari
+laporan. Untuk dikutip, pakai laporan akhir.
+
+## Dokumentasi
+- [docs/FINAL_REPORT.md](docs/FINAL_REPORT.md) — laporan akhir lintas platform; temuan per platform:
+  [X/Twitter](docs/twitter_findings.md), [Instagram](docs/instagram_findings.md),
+  [Facebook](docs/facebook_findings.md), [TikTok](docs/tiktok_findings.md)
+- [docs/methodology.md](docs/methodology.md) — tujuh aturan metode yang dipakai semua track
+- [docs/architecture.md](docs/architecture.md) — diagram arsitektur (Mermaid) dan peta komponen
+- [docs/mongodb_powerbi.md](docs/mongodb_powerbi.md) — koleksi MongoDB dan tabel Power BI
+- [docs/adr/](docs/adr/) — keputusan arsitektur (ADR 0001–0008)
+
+`outputs/metrics/*.json` dan `outputs/figures/*.png` yang di-commit adalah hasil run lengkap yang dirujuk
+laporan, setelah diperiksa bebas identitas akun. File yang memuat id akun atau id baris
+(`cross_platform_comparison.json`, `facebook.json`, `instagram.json`) dan semua keluaran per akun hanya
+dibuat ulang secara lokal ([ADR 0007](docs/adr/0007-no-dataset-or-per-account-output.md)).
+
 ## Jalur analisis lintas platform
 Selain pipeline operasional di atas, `src/` memuat pipeline analisis per platform yang menghasilkan
 angka-angka di laporan. Semuanya membaca file mentah yang sama di `data/landing/<kunci>/` dan menulis
@@ -81,12 +107,12 @@ ke `outputs/` (metrik JSON, gambar) serta `outputs/predictions/` (skor per akun,
 
 ```bash
 python src/twitter_faker_check.py          # beberapa detik, tanpa Spark
-python src/twitter_pipeline.py             # ±20 menit (CV 3-fold Random Forest pada 37 ribu akun)
+python src/twitter_pipeline.py             # ±18 menit (CV 3-fold Random Forest pada 37 ribu akun)
 python src/twitter_pipeline.py --dataset real
-python src/instagram_pipeline.py           # ±2 menit
-python src/facebook_pipeline.py            # ±2 menit
-python src/tiktok_pipeline.py              # ±2 menit; jalankan SETELAH track lain (membaca metriknya)
-python src/synthesis.py                    # ±3 menit; butuh MongoDB (lihat di bawah) atau --skip-mongo
+python src/instagram_pipeline.py           # ±4,5 menit (CV berulang, split lottery, learning curve)
+python src/facebook_pipeline.py            # ±3 menit
+python src/tiktok_pipeline.py              # <1 menit; jalankan SETELAH track lain (membaca metriknya)
+python src/synthesis.py                    # ±1 menit; butuh MongoDB (lihat di bawah) atau --skip-mongo
 ```
 Prosedurnya sama untuk setiap dataset: split berstrata 80:20 (seed 42), bobot kelas dari data latih,
 CV 3-fold di dalam data latih, Random Forest (model utama) dan Logistic Regression (baseline), lalu

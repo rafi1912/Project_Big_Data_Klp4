@@ -1,0 +1,14 @@
+{
+  "faker_version": "40.44.0",
+  "faker_en_US_lorem_word_list_size": 971,
+  "tweet_vocabulary_size": 971,
+  "tweet_words_in_faker_list": 971,
+  "tweet_words_not_in_faker_list": [],
+  "faker_words_absent_from_tweets": 0,
+  "hashtag_vocabulary_size": 971,
+  "hashtag_words_in_faker_list": 971,
+  "location_share_with_faker_city_prefix": 0.5,
+  "location_share_with_faker_city_suffix": 0.7488,
+  "location_share_with_prefix_or_suffix": 1.0,
+  "verdict": "Tweet and Hashtags vocabularies are exactly Faker's en_US lorem word list"
+}

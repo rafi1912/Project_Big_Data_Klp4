@@ -1,0 +1,2021 @@
+{
+  "platform": "tiktok",
+  "dataset": {
+    "name": "TikTok 2025 dataset (merged, deduplicated)",
+    "source": "kaggle: haziqhalifi/tiktok-2025-dataset",
+    "file": "data/landing/tiktok_videos/tiktok_merged_data_deduplicated.csv",
+    "n_rows": 7225,
+    "unit_in_file": "video",
+    "unit_of_analysis": "author",
+    "n_authors": 6693,
+    "label_col": null,
+    "positive_means": null,
+    "ground_truth": "NONE. No label exists and none was created. Nothing in this file may be read as 'bot' or 'not bot'."
+  },
+  "class_balance": null,
+  "split": null,
+  "models": {
+    "note": "No supervised model was trained. Without ground truth, precision, recall, F1, MCC, ROC-AUC and PR-AUC are undefined, so the contract's supervised metric block is replaced by the descriptive and indicator sections below."
+  },
+  "data_questions": {
+    "n_rows": 7225,
+    "video_id_unique": true,
+    "video_url_unique": true,
+    "url_matches_author_and_video_id": true,
+    "views_vs_plays": {
+      "plays_present": 7218,
+      "views_present": 7,
+      "both_present": 0,
+      "neither_present": 0,
+      "plays_null_rate": 0.001,
+      "views_null_rate": 0.999,
+      "finding": "Mutually exclusive: no row has both, no row has neither. The 7 'views' rows are a separate scrape pass (they are also the only rows with posted_time and fetch_time, and their author handles carry an '@' prefix). They cannot be compared numerically because there is no overlap. On TikTok both names refer to the public play counter.",
+      "decision": "Coalesce into one 'plays' column = coalesce(plays, views). Keep the provenance in 'plays_source'. This is an assumption, and it affects 7 rows (0.10%)."
+    },
+    "create_time_vs_posted_time": {
+      "create_time_present": 7218,
+      "posted_time_present": 7,
+      "both_present": 0,
+      "neither_present": 0,
+      "create_time_null_rate": 0.001,
+      "posted_time_null_rate": 0.999,
+      "finding": "Mutually exclusive, exactly the same split as views/plays: posted_time is the second pass's name for the publish timestamp.",
+      "decision": "Coalesce into 'posted_at'; provenance in 'time_source'."
+    },
+    "fetch_time": {
+      "present": 7,
+      "null_rate": 0.999,
+      "distinct_values": 1,
+      "finding": "Present only on the second-pass rows, with a single value (one batch timestamp). The scrape time of the other 99.9% of rows is unknown.",
+      "consequence": "Video age at scrape time cannot be computed. A video posted the day before the scrape and a video posted six weeks before it have had very different exposure times, so raw engagement counts are not exposure-normalised. Ratios to plays are less affected, but not immune."
+    },
+    "author_namespace": {
+      "authors_raw_distinct": 6694,
+      "authors_after_normalisation": 6693,
+      "at_prefixed_rows": 7,
+      "second_pass_authors_also_in_first_pass": 1,
+      "decision": "Strip a leading '@', trim and lower-case. Without this, one author appears as two."
+    },
+    "videos_per_author": {
+      "n_authors": 6693,
+      "distribution": {
+        "1": 6384,
+        "2": 223,
+        "3": 45,
+        "4": 17,
+        "5": 7,
+        "6": 5,
+        "7": 3,
+        "9": 2,
+        "10": 2,
+        "11": 1,
+        "12": 1,
+        "14": 1,
+        "15": 1,
+        "16": 1
+      },
+      "authors_with_1_video": 6384,
+      "share_authors_with_1_video": 0.9538,
+      "authors_ge_2": 309,
+      "authors_ge_3": 86,
+      "authors_ge_5": 24,
+      "share_authors_ge_3": 0.0128,
+      "share_authors_ge_5": 0.0036,
+      "videos_by_authors_ge_3": 395,
+      "max_videos_one_author": 16,
+      "consequence": "Per-author timing is undefined for most of the data: a single video has no interval, and two videos give one interval with no spread. Interval mean needs >= 2 videos, interval std/CV needs >= 3, and a regularity flag is only raised at >= 5. Below those thresholds the features are left null (NA). They are not imputed."
+    },
+    "sampling_frame": {
+      "posted_at_min": "2025-04-13 21:36:16",
+      "posted_at_max": "2025-05-24 21:52:44",
+      "min_plays": 140800.0,
+      "median_plays": 895700.0,
+      "min_likes": 1514.0,
+      "share_of_videos_in_last_9_days": 0.8677,
+      "daily_counts": {
+        "2025-04-13": 2,
+        "2025-04-14": 1,
+        "2025-04-16": 2,
+        "2025-04-18": 5,
+        "2025-04-19": 6,
+        "2025-04-20": 8,
+        "2025-04-21": 16,
+        "2025-04-22": 19,
+        "2025-04-23": 17,
+        "2025-04-24": 28,
+        "2025-04-25": 23,
+        "2025-04-26": 26,
+        "2025-04-27": 24,
+        "2025-04-28": 23,
+        "2025-04-29": 23,
+        "2025-04-30": 27,
+        "2025-05-01": 30,
+        "2025-05-02": 30,
+        "2025-05-03": 36,
+        "2025-05-04": 38,
+        "2025-05-05": 61,
+        "2025-05-06": 95,
+        "2025-05-07": 71,
+        "2025-05-08": 53,
+        "2025-05-09": 23,
+        "2025-05-10": 20,
+        "2025-05-11": 36,
+        "2025-05-12": 38,
+        "2025-05-13": 25,
+        "2025-05-14": 47,
+        "2025-05-15": 103,
+        "2025-05-16": 354,
+        "2025-05-17": 536,
+        "2025-05-18": 632,
+        "2025-05-19": 773,
+        "2025-05-20": 886,
+        "2025-05-21": 957,
+        "2025-05-22": 1068,
+        "2025-05-23": 852,
+        "2025-05-24": 211
+      },
+      "finding": "Every video has at least ~141k plays. This is a sample of popular / trending videos, not of TikTok accounts in general. Low-reach accounts, where most spam and bot-farm activity would sit, are absent by construction. Posting dates are heavily skewed towards the scrape date.",
+      "consequence": "An author's 'videos' here are their videos that went viral in the window, not all their uploads. Posting-interval features describe the gaps between captured viral videos, so they are a thinned view of posting cadence."
+    },
+    "count_precision": {
+      "by_column": {
+        "likes": {
+          "n_ge_10k": 7177,
+          "share_ge_10k_multiple_of_100": 1.0,
+          "n_ge_1m": 195,
+          "share_ge_1m_multiple_of_100k": 1.0
+        },
+        "comments": {
+          "n_ge_10k": 216,
+          "share_ge_10k_multiple_of_100": 1.0,
+          "n_ge_1m": 0,
+          "share_ge_1m_multiple_of_100k": null
+        },
+        "shares": {
+          "n_ge_10k": 2554,
+          "share_ge_10k_multiple_of_100": 1.0,
+          "n_ge_1m": 6,
+          "share_ge_1m_multiple_of_100k": 1.0
+        },
+        "plays": {
+          "n_ge_10k": 7225,
+          "share_ge_10k_multiple_of_100": 1.0,
+          "n_ge_1m": 3275,
+          "share_ge_1m_multiple_of_100k": 1.0
+        }
+      },
+      "finding": "Counts are display-rounded (e.g. 44.8K -> 44800, 1.2M -> 1200000). A value >= 1M is only known to about +/-50k (~4% at 1.2M).",
+      "consequence": "Engagement ratios carry a few percent of rounding noise. Equal counts across videos are not evidence of duplication."
+    },
+    "likes_greater_than_plays": 0,
+    "hashtag_source": {
+      "col_empty_desc_has": 62.0,
+      "desc_empty_col_has": 21.0,
+      "same_count_share": 0.9554,
+      "decision": "Use the per-video union of the 'hashtags' column and '#tags' parsed from the description, lower-cased and de-duplicated. Neither source is complete on its own."
+    },
+    "music_titles": {
+      "generic_original_sound_videos": 4479,
+      "share": 0.6199,
+      "generic_titles_list": [
+        "alkuper\u00e4inen \u00e4\u00e4ni",
+        "d\u017awi\u0119k oryginalny",
+        "eredeti hang",
+        "nh\u1ea1c n\u1ec1n",
+        "no sound",
+        "original sound",
+        "originalljud",
+        "originallyd",
+        "originalton",
+        "origineel geluid",
+        "origin\u00e1ln\u00ed zvuk",
+        "orihinal na tunog",
+        "orijinal ses",
+        "som original",
+        "son original",
+        "sonido original",
+        "suara asli",
+        "sunet original",
+        "suono originale",
+        "\u03c0\u03c1\u03c9\u03c4\u03cc\u03c4\u03c5\u03c0\u03bf\u03c2 \u03ae\u03c7\u03bf\u03c2",
+        "\u043e\u0440\u0438\u0433\u0438\u043d\u0430\u043b\u044c\u043d\u044b\u0439 \u0437\u0432\u0443\u043a",
+        "\u043e\u0440\u0438\u0433\u0456\u043d\u0430\u043b\u044c\u043d\u0438\u0439 \u0437\u0432\u0443\u043a",
+        "\u05e6\u05dc\u05d9\u05dc \u05de\u05e7\u05d5\u05e8\u05d9",
+        "\u0627\u0644\u0635\u0648\u062a \u0627\u0644\u0623\u0635\u0644\u064a",
+        "\u0e40\u0e2a\u0e35\u0e22\u0e07\u0e15\u0e49\u0e19\u0e09\u0e1a\u0e31\u0e1a",
+        "\u30aa\u30ea\u30b8\u30ca\u30eb\u697d\u66f2",
+        "\u539f\u58f0",
+        "\u539f\u8072",
+        "\uc624\ub9ac\uc9c0\ub110 \uc0ac\uc6b4\ub4dc"
+      ],
+      "decision": "Bare titles like 'original sound' (28 localisations, plus 'no sound') are placeholders: each one is a different audio clip. Music repetition is therefore computed only over specific (named) tracks."
+    },
+    "zero_comment_videos": {
+      "n": 34,
+      "decision": "0 comments on a video with >140k plays most plausibly means comments were switched off. The comment rate treats those videos as unknown, not as zero."
+    },
+    "exact_minute_timestamps": {
+      "n": 200,
+      "share": 0.0277,
+      "expected_share_if_uniform": 0.0167,
+      "finding": "Slightly more videos are published at second :00 than chance predicts. This is consistent with scheduled posting, which TikTok offers as a native creator feature. It is reported at population level only and is not used as an indicator."
+    },
+    "descriptions": {
+      "empty": 692,
+      "empty_share": 0.0958,
+      "with_url": 11,
+      "with_mention": 950,
+      "decision": "An empty description is a real value (no caption written), so its length is 0, not missing."
+    }
+  },
+  "features": {
+    "used": [
+      "video_count",
+      "active_days",
+      "active_span_days",
+      "videos_per_day",
+      "avg_posting_interval_hours",
+      "min_posting_interval_minutes",
+      "posting_interval_std_hours",
+      "posting_interval_cv",
+      "burstiness_coefficient",
+      "max_videos_in_60min",
+      "avg_likes",
+      "avg_comments",
+      "avg_shares",
+      "avg_plays",
+      "like_rate",
+      "comment_rate",
+      "share_rate",
+      "avg_description_length",
+      "empty_description_share",
+      "avg_hashtag_count",
+      "avg_mention_count",
+      "hashtag_repetition",
+      "hashtag_set_jaccard_mean",
+      "description_similarity_mean",
+      "description_similarity_max",
+      "generic_sound_share",
+      "music_repetition"
+    ],
+    "dropped": {
+      "video_id": "identifier (contract rule 1)",
+      "author": "grouping key + identifier: replaced by a pseudonymous author_key, never a feature",
+      "video_url": "identifier (contains author handle and video id)",
+      "fetch_time": "99.9% missing; single batch value where present",
+      "views": "merged into plays (mutually exclusive columns)",
+      "posted_time": "merged into posted_at (mutually exclusive columns)",
+      "music": "used only through generic_sound_share and music_repetition, never as raw text",
+      "description / hashtags": "used only through engineered length / count / similarity features"
+    },
+    "engineered": {
+      "video_count": "number of videos by the author in this sample (NOT the account's total uploads)",
+      "active_days": "distinct calendar dates with >= 1 captured video",
+      "active_span_days": "(last_posted_at - first_posted_at) in days",
+      "videos_per_day": "video_count / max(active_span_days, 1)",
+      "avg_posting_interval_hours": "mean gap between consecutive captured videos",
+      "min_posting_interval_minutes": "smallest gap between consecutive captured videos",
+      "posting_interval_std_hours": "sample std of gaps",
+      "posting_interval_cv": "std / mean of gaps (0 = clockwork, ~1 = random, >1 = bursty)",
+      "burstiness_coefficient": "(CV - 1) / (CV + 1), Goh & Barabasi 2008; -1 regular, 0 random, +1 bursty",
+      "max_videos_in_60min": "most captured videos inside any 60-minute window",
+      "avg_likes": "mean likes per video",
+      "avg_comments": "mean comments per video (0s included as reported)",
+      "avg_shares": "mean shares per video",
+      "avg_plays": "mean plays per video (plays coalesced with views)",
+      "like_rate": "sum(likes) / sum(plays)",
+      "comment_rate": "sum(comments) / sum(plays) over videos with comments > 0",
+      "share_rate": "sum(shares) / sum(plays)",
+      "avg_description_length": "mean caption length in characters (empty caption = 0)",
+      "empty_description_share": "share of videos with no caption",
+      "avg_hashtag_count": "mean distinct hashtags per video (column UNION caption)",
+      "avg_mention_count": "mean @mentions per caption",
+      "hashtag_repetition": "1 - distinct_tags / total_tags across the author's videos",
+      "hashtag_set_jaccard_mean": "mean pairwise Jaccard of hashtag sets between the author's videos",
+      "description_similarity_mean": "mean pairwise Jaccard of caption word sets (captions >= 3 words, hashtags/mentions/URLs removed)",
+      "description_similarity_max": "max of the above",
+      "generic_sound_share": "share of videos whose sound is a bare 'original sound' placeholder",
+      "music_repetition": "1 - distinct_named_tracks / named_track_videos (named tracks only)"
+    },
+    "na_policy": "A feature that is mathematically undefined for an author (e.g. interval spread with < 3 videos) is NA. No feature is imputed. Indicators are tri-state: 1 fired, 0 assessed and did not fire, NA not assessable. NA is never treated as 0.",
+    "thresholds": {
+      "MIN_VIDEOS_MEAN_INTERVAL": 2,
+      "MIN_VIDEOS_DISPERSION": 3,
+      "MIN_VIDEOS_REGULARITY_FLAG": 5,
+      "REGULARITY_P_THRESHOLD": 0.01,
+      "BURST_WINDOW_SECONDS": 3600,
+      "BURST_MIN_VIDEOS": 3,
+      "CAPTION_MIN_TOKENS": 3,
+      "CAPTION_DUP_JACCARD": 0.8,
+      "ROBUST_Z_THRESHOLD": 3.5
+    }
+  },
+  "descriptive_statistics": {
+    "video_count": {
+      "group": "volume",
+      "formula": "number of videos by the author in this sample (NOT the account's total uploads)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 1.0795,
+      "std": 0.5412,
+      "min": 1,
+      "p05": 1.0,
+      "p25": 1.0,
+      "median": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "max": 16
+    },
+    "active_days": {
+      "group": "volume",
+      "formula": "distinct calendar dates with >= 1 captured video",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 1.0593,
+      "std": 0.3546,
+      "min": 1,
+      "p05": 1.0,
+      "p25": 1.0,
+      "median": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "max": 9
+    },
+    "active_span_days": {
+      "group": "timing",
+      "formula": "(last_posted_at - first_posted_at) in days",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 309,
+      "n_undefined_NA": 6384,
+      "share_defined": 0.0462,
+      "mean": 4.5025,
+      "std": 5.2402,
+      "min": 0.0,
+      "p05": 0.1174,
+      "p25": 1.1141,
+      "median": 2.9395,
+      "p75": 5.6764,
+      "p95": 16.9963,
+      "max": 34.969
+    },
+    "videos_per_day": {
+      "group": "timing",
+      "formula": "video_count / max(active_span_days, 1)",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 309,
+      "n_undefined_NA": 6384,
+      "share_defined": 0.0462,
+      "mean": 1.1119,
+      "std": 0.7732,
+      "min": 0.0724,
+      "p05": 0.1516,
+      "p25": 0.473,
+      "median": 0.9637,
+      "p75": 1.8789,
+      "p95": 2.0706,
+      "max": 4.3178
+    },
+    "avg_posting_interval_hours": {
+      "group": "timing",
+      "formula": "mean gap between consecutive captured videos",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 309,
+      "n_undefined_NA": 6384,
+      "share_defined": 0.0462,
+      "mean": 78.2265,
+      "std": 93.9195,
+      "min": 0.0,
+      "p05": 2.5749,
+      "p25": 23.5158,
+      "median": 46.4201,
+      "p75": 96.7564,
+      "p95": 298.7331,
+      "max": 663.0889
+    },
+    "min_posting_interval_minutes": {
+      "group": "timing",
+      "formula": "smallest gap between consecutive captured videos",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 309,
+      "n_undefined_NA": 6384,
+      "share_defined": 0.0462,
+      "mean": 4076.2572,
+      "std": 5648.3634,
+      "min": 0.0,
+      "p05": 20.4833,
+      "p25": 762.6167,
+      "median": 2324.0333,
+      "p75": 5689.4,
+      "p95": 17354.07,
+      "max": 39785.3333
+    },
+    "posting_interval_std_hours": {
+      "group": "timing",
+      "formula": "sample std of gaps",
+      "defined_when_video_count_ge": 3,
+      "n_defined": 86,
+      "n_undefined_NA": 6607,
+      "share_defined": 0.0128,
+      "mean": 52.4632,
+      "std": 72.9251,
+      "min": 0.0359,
+      "p05": 3.9748,
+      "p25": 13.4734,
+      "median": 29.1859,
+      "p75": 53.851,
+      "p95": 166.7082,
+      "max": 463.6696
+    },
+    "posting_interval_cv": {
+      "group": "timing",
+      "formula": "std / mean of gaps (0 = clockwork, ~1 = random, >1 = bursty)",
+      "defined_when_video_count_ge": 3,
+      "n_defined": 86,
+      "n_undefined_NA": 6607,
+      "share_defined": 0.0128,
+      "mean": 0.9438,
+      "std": 0.4886,
+      "min": 0.0044,
+      "p05": 0.1857,
+      "p25": 0.6378,
+      "median": 0.8915,
+      "p75": 1.2814,
+      "p95": 1.6877,
+      "max": 2.3715
+    },
+    "burstiness_coefficient": {
+      "group": "timing",
+      "formula": "(CV - 1) / (CV + 1), Goh & Barabasi 2008; -1 regular, 0 random, +1 bursty",
+      "defined_when_video_count_ge": 3,
+      "n_defined": 86,
+      "n_undefined_NA": 6607,
+      "share_defined": 0.0128,
+      "mean": -0.0995,
+      "std": 0.2995,
+      "min": -0.9913,
+      "p05": -0.6868,
+      "p25": -0.2211,
+      "median": -0.0574,
+      "p75": 0.1233,
+      "p95": 0.2558,
+      "max": 0.4068
+    },
+    "max_videos_in_60min": {
+      "group": "timing",
+      "formula": "most captured videos inside any 60-minute window",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 309,
+      "n_undefined_NA": 6384,
+      "share_defined": 0.0462,
+      "mean": 1.1036,
+      "std": 0.3356,
+      "min": 1.0,
+      "p05": 1.0,
+      "p25": 1.0,
+      "median": 1.0,
+      "p75": 1.0,
+      "p95": 2.0,
+      "max": 3.0
+    },
+    "avg_likes": {
+      "group": "engagement",
+      "formula": "mean likes per video",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 211499.4782,
+      "std": 408437.3851,
+      "min": 1514.0,
+      "p05": 21060.0,
+      "p25": 53700.0,
+      "median": 106800.0,
+      "p75": 220700.0,
+      "p95": 695180.0,
+      "max": 13100000.0
+    },
+    "avg_comments": {
+      "group": "engagement",
+      "formula": "mean comments per video (0s included as reported)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 2017.0126,
+      "std": 7778.6281,
+      "min": 0.0,
+      "p05": 74.6,
+      "p25": 271.0,
+      "median": 659.0,
+      "p75": 1684.5,
+      "p95": 7115.0,
+      "max": 364300.0
+    },
+    "avg_shares": {
+      "group": "engagement",
+      "formula": "mean shares per video",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 23772.3556,
+      "std": 75633.408,
+      "min": 13.0,
+      "p05": 188.0,
+      "p25": 1295.5,
+      "median": 5156.0,
+      "p75": 18600.0,
+      "p95": 93740.0,
+      "max": 2600000.0
+    },
+    "avg_plays": {
+      "group": "engagement",
+      "formula": "mean plays per video (plays coalesced with views)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 1932841.2104,
+      "std": 3889651.4848,
+      "min": 140800.0,
+      "p05": 261060.0,
+      "p25": 507800.0,
+      "median": 903100.0,
+      "p75": 1800000.0,
+      "p95": 6840000.0,
+      "max": 83100000.0
+    },
+    "like_rate": {
+      "group": "engagement",
+      "formula": "sum(likes) / sum(plays)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 0.1317,
+      "std": 0.0752,
+      "min": 0.0007,
+      "p05": 0.0303,
+      "p25": 0.0725,
+      "median": 0.1189,
+      "p75": 0.1813,
+      "p95": 0.2746,
+      "max": 0.4012
+    },
+    "comment_rate": {
+      "group": "engagement",
+      "formula": "sum(comments) / sum(plays) over videos with comments > 0",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6661,
+      "n_undefined_NA": 32,
+      "share_defined": 0.9952,
+      "mean": 0.0015,
+      "std": 0.004,
+      "min": 0.0,
+      "p05": 0.0001,
+      "p25": 0.0003,
+      "median": 0.0006,
+      "p75": 0.0013,
+      "p95": 0.0046,
+      "max": 0.1212
+    },
+    "share_rate": {
+      "group": "engagement",
+      "formula": "sum(shares) / sum(plays)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 0.0127,
+      "std": 0.0181,
+      "min": 0.0,
+      "p05": 0.0003,
+      "p25": 0.0015,
+      "median": 0.0055,
+      "p75": 0.0167,
+      "p95": 0.0483,
+      "max": 0.2857
+    },
+    "avg_description_length": {
+      "group": "content",
+      "formula": "mean caption length in characters (empty caption = 0)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 96.0495,
+      "std": 176.3251,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 28.0,
+      "median": 62.0,
+      "p75": 110.3333,
+      "p95": 264.4,
+      "max": 3973.0
+    },
+    "empty_description_share": {
+      "group": "content",
+      "formula": "share of videos with no caption",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 0.096,
+      "std": 0.2935,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 0.0,
+      "p75": 0.0,
+      "p95": 1.0,
+      "max": 1.0
+    },
+    "avg_hashtag_count": {
+      "group": "content",
+      "formula": "mean distinct hashtags per video (column UNION caption)",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 4.2171,
+      "std": 5.0734,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 3.0,
+      "p75": 6.0,
+      "p95": 13.0,
+      "max": 122.0
+    },
+    "avg_mention_count": {
+      "group": "content",
+      "formula": "mean @mentions per caption",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 0.1786,
+      "std": 0.5705,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 0.0,
+      "p75": 0.0,
+      "p95": 1.0,
+      "max": 12.0
+    },
+    "hashtag_repetition": {
+      "group": "repetition",
+      "formula": "1 - distinct_tags / total_tags across the author's videos",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 204,
+      "n_undefined_NA": 6489,
+      "share_defined": 0.0305,
+      "mean": 0.3307,
+      "std": 0.2138,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.1635,
+      "median": 0.3333,
+      "p75": 0.5,
+      "p95": 0.7021,
+      "max": 0.9
+    },
+    "hashtag_set_jaccard_mean": {
+      "group": "repetition",
+      "formula": "mean pairwise Jaccard of hashtag sets between the author's videos",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 198,
+      "n_undefined_NA": 6495,
+      "share_defined": 0.0296,
+      "mean": 0.5069,
+      "std": 0.3692,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.1667,
+      "median": 0.5,
+      "p75": 1.0,
+      "p95": 1.0,
+      "max": 1.0
+    },
+    "description_similarity_mean": {
+      "group": "repetition",
+      "formula": "mean pairwise Jaccard of caption word sets (captions >= 3 words, hashtags/mentions/URLs removed)",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 183,
+      "n_undefined_NA": 6510,
+      "share_defined": 0.0273,
+      "mean": 0.1096,
+      "std": 0.2171,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 0.0435,
+      "p75": 0.0923,
+      "p95": 0.6283,
+      "max": 1.0
+    },
+    "description_similarity_max": {
+      "group": "repetition",
+      "formula": "max of the above",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 183,
+      "n_undefined_NA": 6510,
+      "share_defined": 0.0273,
+      "mean": 0.1332,
+      "std": 0.2247,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 0.0625,
+      "p75": 0.1333,
+      "p95": 0.6636,
+      "max": 1.0
+    },
+    "generic_sound_share": {
+      "group": "repetition",
+      "formula": "share of videos whose sound is a bare 'original sound' placeholder",
+      "defined_when_video_count_ge": 1,
+      "n_defined": 6693,
+      "n_undefined_NA": 0,
+      "share_defined": 1.0,
+      "mean": 0.6169,
+      "std": 0.4823,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 1.0,
+      "p75": 1.0,
+      "p95": 1.0,
+      "max": 1.0
+    },
+    "music_repetition": {
+      "group": "repetition",
+      "formula": "1 - distinct_named_tracks / named_track_videos (named tracks only)",
+      "defined_when_video_count_ge": 2,
+      "n_defined": 85,
+      "n_undefined_NA": 6608,
+      "share_defined": 0.0127,
+      "mean": 0.1482,
+      "std": 0.2406,
+      "min": 0.0,
+      "p05": 0.0,
+      "p25": 0.0,
+      "median": 0.0,
+      "p75": 0.5,
+      "p95": 0.5,
+      "max": 0.75
+    }
+  },
+  "indicators": {
+    "ind_regular_posting": {
+      "measures": "posting-interval CV significantly below what random posting produces (one-sided p < 0.01 under a simulated Poisson null)",
+      "eligible_rule": "video_count >= 5",
+      "evidential_weight": "primary",
+      "why": "Clockwork timing is the one behaviour in this data that points at automation specifically and not at popularity.",
+      "benign_explanations": [
+        "TikTok's native post scheduler",
+        "social-media managers / brand accounts",
+        "disciplined creators with a fixed daily slot"
+      ],
+      "blind_spots": "Only viral videos are captured, so a perfectly periodic poster whose videos go viral at random shows irregular gaps. A non-flag is NOT evidence of human posting.",
+      "n_assessed": 24,
+      "n_not_assessable_NA": 6669,
+      "share_of_authors_assessable": 0.0036,
+      "n_fired": 0,
+      "fire_rate_among_assessed": 0.0,
+      "fire_rate_among_all_authors": 0.0
+    },
+    "ind_burst_posting": {
+      "measures": ">= 3 captured videos inside one 60-minute window",
+      "eligible_rule": "video_count >= 3",
+      "evidential_weight": "moderate",
+      "why": "Rapid-fire uploading is a common automation footprint.",
+      "benign_explanations": [
+        "batch-uploading a multi-part series",
+        "re-uploading after an edit",
+        "event / live coverage"
+      ],
+      "blind_spots": "Only bursts in which several videos went viral are visible.",
+      "n_assessed": 86,
+      "n_not_assessable_NA": 6607,
+      "share_of_authors_assessable": 0.0128,
+      "n_fired": 3,
+      "fire_rate_among_assessed": 0.0349,
+      "fire_rate_among_all_authors": 0.0004
+    },
+    "ind_caption_duplication": {
+      "measures": "two of the author's captions (each >= 3 words, hashtags removed) with word-set Jaccard >= 0.8",
+      "eligible_rule": ">= 2 videos with captions of >= 3 words",
+      "evidential_weight": "moderate",
+      "why": "Copy-paste captions are a template / content-farm footprint.",
+      "benign_explanations": [
+        "numbered series ('part 18 ...')",
+        "creator's fixed sign-off or call to action",
+        "brand campaign copy"
+      ],
+      "blind_spots": "Within-author only. Cross-account copying is not assessed (see coordination).",
+      "n_assessed": 183,
+      "n_not_assessable_NA": 6510,
+      "share_of_authors_assessable": 0.0273,
+      "n_fired": 7,
+      "fire_rate_among_assessed": 0.0383,
+      "fire_rate_among_all_authors": 0.001
+    },
+    "ind_engagement_outlier": {
+      "measures": "|robust z| > 3.5 on log like-, comment- or share-rate vs all authors",
+      "eligible_rule": "plays known (all authors; comment rate NA when comments look disabled)",
+      "evidential_weight": "weak",
+      "why": "Bought likes or views can distort ratios, but so can virality, niche audiences, giveaways and comment-bait. A high like rate is as likely to be a popular human.",
+      "benign_explanations": [
+        "viral reach to casual viewers lowers like rate",
+        "loyal fan base raises it",
+        "giveaway / 'comment to win' posts",
+        "display-rounding at small counts"
+      ],
+      "blind_spots": "Two-sided. The direction alone means nothing.",
+      "n_assessed": 6693,
+      "n_not_assessable_NA": 0,
+      "share_of_authors_assessable": 1.0,
+      "n_fired": 83,
+      "fire_rate_among_assessed": 0.0124,
+      "fire_rate_among_all_authors": 0.0124
+    },
+    "ind_iforest_outlier": {
+      "measures": "IsolationForest (contamination='auto') on engagement and caption features",
+      "eligible_rule": "all authors with finite inputs",
+      "evidential_weight": "context only",
+      "why": "Shown so the group can see what a naive multivariate anomaly model finds: mostly scale and caption-style extremes, not automation.",
+      "benign_explanations": [
+        "very viral or very niche authors",
+        "long-caption storytellers",
+        "hashtag-heavy but human posting"
+      ],
+      "blind_spots": "Cannot see timing (undefined for 95% of authors).",
+      "n_assessed": 6693,
+      "n_not_assessable_NA": 0,
+      "share_of_authors_assessable": 1.0,
+      "n_fired": 788,
+      "fire_rate_among_assessed": 0.1177,
+      "fire_rate_among_all_authors": 0.1177
+    }
+  },
+  "indicator_diagnostics": {
+    "regularity_null": {
+      "null_model": "homogeneous Poisson posting (i.i.d. exponential gaps), simulated",
+      "simulations_per_n": 200000,
+      "seed": 42,
+      "cv_cutoff_at_p_threshold_by_n": {
+        "3": 0.0143,
+        "4": 0.1114,
+        "5": 0.2151,
+        "6": 0.2949,
+        "7": 0.3531,
+        "8": 0.3952,
+        "9": 0.4308,
+        "10": 0.457,
+        "11": 0.4833,
+        "12": 0.5029,
+        "13": 0.5191,
+        "14": 0.5324,
+        "15": 0.5458,
+        "16": 0.5614
+      },
+      "null_median_cv_by_n": {
+        "3": 0.7058,
+        "4": 0.7867,
+        "5": 0.8142,
+        "6": 0.8382,
+        "7": 0.8559,
+        "8": 0.8685,
+        "9": 0.8818,
+        "10": 0.8893,
+        "11": 0.8969,
+        "12": 0.9033,
+        "13": 0.9098,
+        "14": 0.9137,
+        "15": 0.9176,
+        "16": 0.9222
+      },
+      "expected_false_alarms_if_all_eligible_were_random": 0.24,
+      "sensitivity_if_threshold_lowered_to_3_videos": {
+        "eligible": 86,
+        "would_flag": 2,
+        "expected_false_alarms_if_random": 0.86
+      },
+      "observed_cv_min_among_eligible": 0.6047,
+      "observed_cv_median_among_eligible": 1.0829,
+      "observed_burstiness_median_among_eligible": 0.0398,
+      "share_eligible_burstier_than_random": 0.5833
+    },
+    "burst": {
+      "authors_with_two_videos_at_identical_second": 1
+    },
+    "engagement": {
+      "fired_by_ratio": {
+        "like_rate": {
+          "low_tail": 42,
+          "high_tail": 0
+        },
+        "comment_rate": {
+          "low_tail": 16,
+          "high_tail": 29
+        },
+        "share_rate": {
+          "low_tail": 1,
+          "high_tail": 0
+        }
+      },
+      "share_of_flags_with_video_count_1": 1.0,
+      "share_of_all_authors_with_video_count_1": 0.9538,
+      "note": "Author rates are ratios of sums over the author's videos, so averaging several videos pulls extremes towards the middle. Single-video authors are therefore over-represented among outliers for purely statistical reasons."
+    },
+    "threshold_sensitivity_pandas": {
+      "regularity": {
+        "min_videos_3__p_0.05": {
+          "eligible": 86,
+          "flagged": 3,
+          "expected_false_alarms_if_random": 4.3
+        },
+        "min_videos_3__p_0.01": {
+          "eligible": 86,
+          "flagged": 2,
+          "expected_false_alarms_if_random": 0.86
+        },
+        "min_videos_3__p_0.001": {
+          "eligible": 86,
+          "flagged": 0,
+          "expected_false_alarms_if_random": 0.086
+        },
+        "min_videos_4__p_0.05": {
+          "eligible": 41,
+          "flagged": 1,
+          "expected_false_alarms_if_random": 2.05
+        },
+        "min_videos_4__p_0.01": {
+          "eligible": 41,
+          "flagged": 0,
+          "expected_false_alarms_if_random": 0.41
+        },
+        "min_videos_4__p_0.001": {
+          "eligible": 41,
+          "flagged": 0,
+          "expected_false_alarms_if_random": 0.041
+        },
+        "min_videos_5__p_0.05": {
+          "eligible": 24,
+          "flagged": 0,
+          "expected_false_alarms_if_random": 1.2
+        },
+        "min_videos_5__p_0.01": {
+          "eligible": 24,
+          "flagged": 0,
+          "expected_false_alarms_if_random": 0.24
+        },
+        "min_videos_5__p_0.001": {
+          "eligible": 24,
+          "flagged": 0,
+          "expected_false_alarms_if_random": 0.024
+        }
+      },
+      "engagement_outlier_flagged": {
+        "robust_z_3.0": 161,
+        "robust_z_3.5": 83,
+        "robust_z_4.0": 36,
+        "robust_z_5.0": 10
+      },
+      "defaults": {
+        "regularity": "min_videos_5__p_0.01",
+        "engagement": "robust_z_3.5"
+      }
+    },
+    "iforest": {
+      "features": [
+        "log10_avg_plays",
+        "log10_like_rate",
+        "log10_share_rate",
+        "log1p_avg_description_length",
+        "avg_hashtag_count",
+        "avg_mention_count"
+      ],
+      "params": {
+        "n_estimators": 300,
+        "max_samples": 256,
+        "contamination": "auto",
+        "random_state": 42
+      },
+      "n_scored": 6693,
+      "drivers": [
+        {
+          "feature": "avg_mention_count",
+          "spearman_with_score": 0.4448,
+          "median_flagged": 0.0,
+          "median_not_flagged": 0.0,
+          "p95_flagged": 3.0,
+          "p95_not_flagged": 1.0
+        },
+        {
+          "feature": "log10_like_rate",
+          "spearman_with_score": -0.2089,
+          "median_flagged": -1.1331,
+          "median_not_flagged": -0.9047,
+          "p95_flagged": -0.582,
+          "p95_not_flagged": -0.5583
+        },
+        {
+          "feature": "log10_avg_plays",
+          "spearman_with_score": 0.1531,
+          "median_flagged": 6.1139,
+          "median_not_flagged": 5.9383,
+          "p95_flagged": 7.2647,
+          "p95_not_flagged": 6.716
+        },
+        {
+          "feature": "log10_share_rate",
+          "spearman_with_score": -0.1459,
+          "median_flagged": -2.6587,
+          "median_not_flagged": -2.2249,
+          "p95_flagged": -1.1928,
+          "p95_not_flagged": -1.3304
+        },
+        {
+          "feature": "log1p_avg_description_length",
+          "spearman_with_score": 0.0745,
+          "median_flagged": 4.7622,
+          "median_not_flagged": 4.0943,
+          "p95_flagged": 6.4672,
+          "p95_not_flagged": 5.3225
+        },
+        {
+          "feature": "avg_hashtag_count",
+          "spearman_with_score": 0.0204,
+          "median_flagged": 5.0,
+          "median_not_flagged": 3.0,
+          "p95_flagged": 25.9,
+          "p95_not_flagged": 11.0
+        }
+      ],
+      "why_not_generic_sound_share": "near-binary for single-video authors (0 or 1); IsolationForest splits on it trivially, and a named vs generic sound is a style choice, not an anomaly",
+      "flag_rate_note": "contamination='auto' uses the original paper's fixed score offset, so the flagged share is a property of the score distribution, not an estimate of bot prevalence",
+      "why_not_comment_rate": "comment_rate is NA for authors whose comments look switched off. IsolationForest cannot take NA, and imputing would invent data, so it is left out.",
+      "why_not_timing": "Timing features exist for <5% of authors. Including them would require imputing the other 95%."
+    }
+  },
+  "threshold_sensitivity": {
+    "purpose": "Every threshold here is a judgement call that no ground truth can calibrate. These grids show how far each flag count depends on the choice. Defaults were fixed before the results were inspected.",
+    "burst": {
+      ">=2_videos_within_10min": {
+        "eligible": 309,
+        "flagged": 11
+      },
+      ">=3_videos_within_10min": {
+        "eligible": 86,
+        "flagged": 0
+      },
+      ">=4_videos_within_10min": {
+        "eligible": 41,
+        "flagged": 0
+      },
+      ">=2_videos_within_60min": {
+        "eligible": 309,
+        "flagged": 29
+      },
+      ">=3_videos_within_60min": {
+        "eligible": 86,
+        "flagged": 3
+      },
+      ">=4_videos_within_60min": {
+        "eligible": 41,
+        "flagged": 0
+      },
+      ">=2_videos_within_24h": {
+        "eligible": 309,
+        "flagged": 117
+      },
+      ">=3_videos_within_24h": {
+        "eligible": 86,
+        "flagged": 29
+      },
+      ">=4_videos_within_24h": {
+        "eligible": 41,
+        "flagged": 8
+      }
+    },
+    "caption_duplication": {
+      "min_words_1__jaccard_0.6": {
+        "eligible": 224,
+        "flagged": 15
+      },
+      "min_words_1__jaccard_0.8": {
+        "eligible": 224,
+        "flagged": 10
+      },
+      "min_words_1__jaccard_1.0": {
+        "eligible": 224,
+        "flagged": 10
+      },
+      "min_words_2__jaccard_0.6": {
+        "eligible": 210,
+        "flagged": 15
+      },
+      "min_words_2__jaccard_0.8": {
+        "eligible": 210,
+        "flagged": 10
+      },
+      "min_words_2__jaccard_1.0": {
+        "eligible": 210,
+        "flagged": 10
+      },
+      "min_words_3__jaccard_0.6": {
+        "eligible": 183,
+        "flagged": 12
+      },
+      "min_words_3__jaccard_0.8": {
+        "eligible": 183,
+        "flagged": 7
+      },
+      "min_words_3__jaccard_1.0": {
+        "eligible": 183,
+        "flagged": 7
+      },
+      "min_words_5__jaccard_0.6": {
+        "eligible": 131,
+        "flagged": 8
+      },
+      "min_words_5__jaccard_0.8": {
+        "eligible": 131,
+        "flagged": 5
+      },
+      "min_words_5__jaccard_1.0": {
+        "eligible": 131,
+        "flagged": 5
+      }
+    },
+    "defaults": {
+      "regularity": "min_videos_5__p_0.01",
+      "engagement": "robust_z_3.5"
+    },
+    "regularity": {
+      "min_videos_3__p_0.05": {
+        "eligible": 86,
+        "flagged": 3,
+        "expected_false_alarms_if_random": 4.3
+      },
+      "min_videos_3__p_0.01": {
+        "eligible": 86,
+        "flagged": 2,
+        "expected_false_alarms_if_random": 0.86
+      },
+      "min_videos_3__p_0.001": {
+        "eligible": 86,
+        "flagged": 0,
+        "expected_false_alarms_if_random": 0.086
+      },
+      "min_videos_4__p_0.05": {
+        "eligible": 41,
+        "flagged": 1,
+        "expected_false_alarms_if_random": 2.05
+      },
+      "min_videos_4__p_0.01": {
+        "eligible": 41,
+        "flagged": 0,
+        "expected_false_alarms_if_random": 0.41
+      },
+      "min_videos_4__p_0.001": {
+        "eligible": 41,
+        "flagged": 0,
+        "expected_false_alarms_if_random": 0.041
+      },
+      "min_videos_5__p_0.05": {
+        "eligible": 24,
+        "flagged": 0,
+        "expected_false_alarms_if_random": 1.2
+      },
+      "min_videos_5__p_0.01": {
+        "eligible": 24,
+        "flagged": 0,
+        "expected_false_alarms_if_random": 0.24
+      },
+      "min_videos_5__p_0.001": {
+        "eligible": 24,
+        "flagged": 0,
+        "expected_false_alarms_if_random": 0.024
+      }
+    },
+    "engagement_outlier_flagged": {
+      "robust_z_3.0": 161,
+      "robust_z_3.5": 83,
+      "robust_z_4.0": 36,
+      "robust_z_5.0": 10
+    }
+  },
+  "indicator_cooccurrence": {
+    "ind_regular_posting": {
+      "ind_regular_posting": 0,
+      "ind_burst_posting": 0,
+      "ind_caption_duplication": 0,
+      "ind_engagement_outlier": 0,
+      "ind_iforest_outlier": 0
+    },
+    "ind_burst_posting": {
+      "ind_regular_posting": 0,
+      "ind_burst_posting": 3,
+      "ind_caption_duplication": 0,
+      "ind_engagement_outlier": 0,
+      "ind_iforest_outlier": 0
+    },
+    "ind_caption_duplication": {
+      "ind_regular_posting": 0,
+      "ind_burst_posting": 0,
+      "ind_caption_duplication": 7,
+      "ind_engagement_outlier": 0,
+      "ind_iforest_outlier": 0
+    },
+    "ind_engagement_outlier": {
+      "ind_regular_posting": 0,
+      "ind_burst_posting": 0,
+      "ind_caption_duplication": 0,
+      "ind_engagement_outlier": 83,
+      "ind_iforest_outlier": 43
+    },
+    "ind_iforest_outlier": {
+      "ind_regular_posting": 0,
+      "ind_burst_posting": 0,
+      "ind_caption_duplication": 0,
+      "ind_engagement_outlier": 43,
+      "ind_iforest_outlier": 788
+    }
+  },
+  "popularity_audit": {
+    "spearman_like_rate_vs_log_avg_plays": -0.2142,
+    "spearman_iforest_score_vs_log_avg_plays": 0.1531,
+    "share_of_engagement_flags_in_top_reach_decile": 0.1446,
+    "share_of_iforest_flags_in_top_reach_decile": 0.2703,
+    "expected_share_if_unrelated_to_reach": 0.1,
+    "engagement_and_iforest_overlap_jaccard": 0.0519,
+    "share_of_iforest_flags_with_video_count_1": 0.9734,
+    "engagement_flag_rate_by_reach_decile": {
+      "1": 0.0015,
+      "2": 0.0075,
+      "3": 0.0105,
+      "4": 0.0164,
+      "5": 0.0104,
+      "6": 0.0149,
+      "7": 0.009,
+      "8": 0.0135,
+      "9": 0.0224,
+      "10": 0.0179
+    },
+    "iforest_flag_rate_by_reach_decile": {
+      "1": 0.0985,
+      "2": 0.0987,
+      "3": 0.0987,
+      "4": 0.0747,
+      "5": 0.0896,
+      "6": 0.0837,
+      "7": 0.0897,
+      "8": 0.0852,
+      "9": 0.1405,
+      "10": 0.3179
+    }
+  },
+  "review_tiers": {
+    "counts": {
+      "behaviour_not_assessable": 5667,
+      "weak_signal_only": 828,
+      "no_indicator_fired": 188,
+      "secondary_context": 10
+    },
+    "rules": {
+      "priority_review": "regular-posting fired, OR burst AND caption-duplication both fired",
+      "secondary_context": "exactly one of burst / caption-duplication fired",
+      "weak_signal_only": "only engagement-outlier and/or IsolationForest fired: do not queue on this alone",
+      "no_indicator_fired": ">= 1 behavioural indicator assessable and none fired (NOT 'authentic')",
+      "behaviour_not_assessable": "no behavioural indicator assessable (single-video authors) and no weak signal"
+    },
+    "why_not_a_score": "The indicators differ in evidential weight and in who they can assess. Adding them up would let several weak, popularity-driven signals outrank one strong one, and would make a 5-indicator count look more precise than the data allows."
+  },
+  "coordination_assessment": {
+    "claim_possible": false,
+    "reason": "The data has no follower / following graph, no reply or duet / stitch links, no shared device or network signal. Shared hashtags, sounds and captions are normal on TikTok (trends, platform programme tags), so they do not show that accounts are linked.",
+    "cross_author_identical_captions": {
+      "distinct_captions_shared_by_2plus_authors": 29,
+      "authors_involved_upper_bound": 89,
+      "of_which_hashtag_only": 23,
+      "top_hashtag_only_examples": [
+        {
+          "caption": "#fyp",
+          "n_authors": 25
+        },
+        {
+          "caption": "#liveincentiveprogram #liveinteraction #paidpartnership",
+          "n_authors": 5
+        },
+        {
+          "caption": "#fyp #foryoupage",
+          "n_authors": 3
+        },
+        {
+          "caption": "#fyp #foryou",
+          "n_authors": 3
+        },
+        {
+          "caption": "#liveincentiveprogram #liverewards #paidpartnership",
+          "n_authors": 3
+        },
+        {
+          "caption": "#foryou",
+          "n_authors": 3
+        }
+      ]
+    }
+  },
+  "cross_platform": {
+    "feature_mapping": [
+      {
+        "source_platform": "instagram",
+        "source_feature": "profile pic",
+        "concept": "has a profile picture",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no profile metadata scraped"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "nums/length username",
+        "concept": "digit ratio of handle",
+        "tiktok_counterpart": "derivable from author handle",
+        "tiktok_status": "excluded_by_rule",
+        "note": "author is the grouping key; the project brief forbids using it as a predictor"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "fullname words",
+        "concept": "display-name word count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no display name"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "nums/length fullname",
+        "concept": "digit ratio of display name",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no display name"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "name==username",
+        "concept": "display name equals handle",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no display name"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "description length",
+        "concept": "profile BIO length",
+        "tiktok_counterpart": "avg_description_length",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "TikTok field is a per-video caption, not the account bio"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "external URL",
+        "concept": "bio has external link",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no bio; 11 of 7225 captions contain a URL"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "private",
+        "concept": "account is private",
+        "tiktok_counterpart": null,
+        "tiktok_status": "constant_on_tiktok",
+        "note": "every scraped video is public by construction"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "#posts",
+        "concept": "account's total posts",
+        "tiktok_counterpart": "video_count",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "TikTok count is viral videos captured in a 6-week window (95% = 1), not lifetime uploads"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "#followers",
+        "concept": "follower count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "instagram",
+        "source_feature": "#follows",
+        "concept": "following count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#friends",
+        "concept": "friend count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#following",
+        "concept": "following count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#community",
+        "concept": "groups / communities joined",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "age",
+        "concept": "account age",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no account creation date; video create_time is not account age"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#postshared",
+        "concept": "account's total posts",
+        "tiktok_counterpart": "video_count",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "in-sample viral videos, not lifetime posts"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#urlshared",
+        "concept": "posts containing URLs",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "11 of 7225 captions contain a URL: effectively constant"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#photos/videos",
+        "concept": "media posts",
+        "tiktok_counterpart": "video_count",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "same problem as #postshared"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "fpurls",
+        "concept": "fraction of posts with URLs",
+        "tiktok_counterpart": null,
+        "tiktok_status": "constant_on_tiktok",
+        "note": "~0 for every author"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "fpphotos/videos",
+        "concept": "fraction of posts with media",
+        "tiktok_counterpart": null,
+        "tiktok_status": "constant_on_tiktok",
+        "note": "every TikTok post is a video (= 1)"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "avgcomment/post",
+        "concept": "comments per post",
+        "tiktok_counterpart": "avg_comments",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "same concept, but source median ~0.46 vs TikTok median ~640: a different population (viral videos)"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "likes/post",
+        "concept": "likes per post",
+        "tiktok_counterpart": "avg_likes",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "same concept, but source median ~0.88 vs TikTok median ~100k: no shared scale"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "tags/post",
+        "concept": "people tagged per post",
+        "tiktok_counterpart": "avg_mention_count",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "@mentions in captions are the nearest analogue; source median ~39 vs TikTok ~0"
+      },
+      {
+        "source_platform": "facebook",
+        "source_feature": "#tags/post",
+        "concept": "hashtags per post",
+        "tiktok_counterpart": "avg_hashtag_count",
+        "tiktok_status": "equivalent",
+        "note": "same concept and unit (per post); source median ~15.5 vs TikTok ~4: overlapping range"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Retweet Count",
+        "concept": "re-shares of the post",
+        "tiktok_counterpart": "avg_shares",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "source range 0-100 (uniform) vs TikTok 13 - 2.6M"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Mention Count",
+        "concept": "mentions in the post",
+        "tiktok_counterpart": "avg_mention_count",
+        "tiktok_status": "equivalent",
+        "note": "same concept, per post; but the source is uniform 0-5, which looks generated, vs TikTok mostly 0-2"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Follower Count",
+        "concept": "follower count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Verified",
+        "concept": "verified badge",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Location",
+        "concept": "profile location",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Created At",
+        "concept": "post timestamp",
+        "tiktok_counterpart": "posted_at",
+        "tiktok_status": "equivalent",
+        "note": "both are post timestamps, but the source has one post per user, so no per-user timing feature exists there"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Hashtags",
+        "concept": "hashtags in the post",
+        "tiktok_counterpart": "avg_hashtag_count",
+        "tiktok_status": "equivalent",
+        "note": "same concept (count per post), but the X/Twitter track found the source hashtag vocabulary is exactly Faker's lorem word list, so the source values are not real behaviour"
+      },
+      {
+        "source_platform": "twitter_synthetic",
+        "source_feature": "Tweet",
+        "concept": "post text",
+        "tiktok_counterpart": "description",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "text exists on both, but the source text is Faker lorem words (X/Twitter track check)"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "followers_count",
+        "concept": "follower count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "friends_count",
+        "concept": "following count",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "favourites_count",
+        "concept": "likes the account has GIVEN",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "TikTok 'likes' are likes RECEIVED by a video, the opposite direction, so they must not be mapped"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "follower_friend_ratio",
+        "concept": "followers / following",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "neither side exists"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "average_tweets_per_day",
+        "concept": "lifetime posting rate",
+        "tiktok_counterpart": "videos_per_day",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "TikTok rate covers captured viral videos over the observed span and is defined for 4.6% of authors"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "account_age_days",
+        "concept": "account age",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no account creation date"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "verified",
+        "concept": "verified badge",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "default_profile",
+        "concept": "profile left at defaults",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no profile metadata"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "default_profile_image",
+        "concept": "default avatar",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "no profile metadata"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "geo_enabled",
+        "concept": "location services on",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "description",
+        "concept": "bio present / bio length",
+        "tiktok_counterpart": "avg_description_length",
+        "tiktok_status": "proxy_not_equivalent",
+        "note": "TikTok field is a per-video caption, not the account bio"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "location",
+        "concept": "profile location set",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "not in the data"
+      },
+      {
+        "source_platform": "twitter_real",
+        "source_feature": "lang",
+        "concept": "account language setting",
+        "tiktok_counterpart": null,
+        "tiktok_status": "missing",
+        "note": "caption language could be detected, but that is not the account setting"
+      }
+    ],
+    "coverage_by_platform": {
+      "facebook": {
+        "n_source_features": 13,
+        "missing": 5,
+        "proxy_not_equivalent": 5,
+        "constant_on_tiktok": 2,
+        "equivalent": 1,
+        "share_equivalent": 0.0769
+      },
+      "instagram": {
+        "n_source_features": 11,
+        "missing": 7,
+        "proxy_not_equivalent": 2,
+        "excluded_by_rule": 1,
+        "constant_on_tiktok": 1,
+        "share_equivalent": 0.0
+      },
+      "twitter_real": {
+        "n_source_features": 13,
+        "missing": 11,
+        "proxy_not_equivalent": 2,
+        "share_equivalent": 0.0
+      },
+      "twitter_synthetic": {
+        "n_source_features": 8,
+        "equivalent": 3,
+        "missing": 3,
+        "proxy_not_equivalent": 2,
+        "share_equivalent": 0.375
+      }
+    },
+    "empirical_scale_comparison": {
+      "facebook::avgcomment/post": {
+        "median": 0.456,
+        "p95": 0.9767,
+        "max": 665.0
+      },
+      "facebook::likes/post": {
+        "median": 0.88,
+        "p95": 1.69,
+        "max": 2.8
+      },
+      "facebook::tags/post": {
+        "median": 39.0,
+        "p95": 71.05,
+        "max": 99
+      },
+      "facebook::#tags/post": {
+        "median": 15.5,
+        "p95": 28.0,
+        "max": 32
+      },
+      "facebook::#postshared": {
+        "median": 876.5,
+        "p95": 3154.3,
+        "max": 3896
+      },
+      "twitter::rows_per_user_id": 1.0,
+      "twitter::Retweet Count": {
+        "median": 50.0,
+        "p95": 95.0,
+        "max": 100
+      },
+      "twitter::Mention Count": {
+        "median": 3.0,
+        "p95": 5.0,
+        "max": 5
+      },
+      "twitter::hashtag_tokens_per_post": {
+        "median": 2.0,
+        "max": 5
+      },
+      "instagram::#posts": {
+        "median": 9.0,
+        "p95": 489.5,
+        "max": 7389
+      },
+      "instagram::description length": {
+        "median": 0.0,
+        "p95": 122.0,
+        "max": 150
+      }
+    },
+    "sibling_track_top_features": {
+      "facebook": {
+        "platform": "facebook",
+        "mapping_block": "facebook",
+        "dataset": "Facebook Spam Dataset",
+        "rf_top5": [
+          {
+            "feature": "log1p_n_urls_shared",
+            "importance": 0.2041,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "log1p_n_community",
+            "importance": 0.1928,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "log1p_n_friends",
+            "importance": 0.1841,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "frac_posts_with_urls",
+            "importance": 0.1222,
+            "tiktok_status": "constant_on_tiktok"
+          },
+          {
+            "feature": "log1p_n_following",
+            "importance": 0.0931,
+            "tiktok_status": "missing"
+          }
+        ],
+        "top5_with_tiktok_equivalent": 0,
+        "rf_importance_share_by_tiktok_status": {
+          "missing": 0.6907,
+          "proxy_not_equivalent": 0.1493,
+          "constant_on_tiktok": 0.1342,
+          "equivalent": 0.0258
+        }
+      },
+      "instagram": {
+        "platform": "instagram",
+        "mapping_block": "instagram",
+        "dataset": "Instagram fake spammer genuine accounts",
+        "rf_top5": [
+          {
+            "feature": "log1p_n_followers",
+            "importance": 0.2849,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "log1p_n_posts",
+            "importance": 0.2487,
+            "tiktok_status": "proxy_not_equivalent"
+          },
+          {
+            "feature": "nums_length_username",
+            "importance": 0.1224,
+            "tiktok_status": "excluded_by_rule"
+          },
+          {
+            "feature": "description_length",
+            "importance": 0.1099,
+            "tiktok_status": "proxy_not_equivalent"
+          },
+          {
+            "feature": "profile_pic",
+            "importance": 0.0975,
+            "tiktok_status": "missing"
+          }
+        ],
+        "top5_with_tiktok_equivalent": 0,
+        "rf_importance_share_by_tiktok_status": {
+          "missing": 0.5042,
+          "proxy_not_equivalent": 0.3586,
+          "excluded_by_rule": 0.1224,
+          "constant_on_tiktok": 0.0148
+        }
+      },
+      "twitter_real": {
+        "platform": "twitter",
+        "mapping_block": "twitter_real",
+        "dataset": "Twitter Human/Bots Dataset (real accounts)",
+        "rf_top5": [
+          {
+            "feature": "log_followers_count",
+            "importance": 0.2211,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "log_favourites_count",
+            "importance": 0.1671,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "log_friends_count",
+            "importance": 0.144,
+            "tiktok_status": "missing"
+          },
+          {
+            "feature": "log_average_tweets_per_day",
+            "importance": 0.0923,
+            "tiktok_status": "proxy_not_equivalent"
+          },
+          {
+            "feature": "verified",
+            "importance": 0.0638,
+            "tiktok_status": "missing"
+          }
+        ],
+        "top5_with_tiktok_equivalent": 0,
+        "rf_importance_share_by_tiktok_status": {
+          "missing": 0.7934,
+          "proxy_not_equivalent": 0.1469,
+          "not_in_raw_mapping (engineered by that track; see findings doc)": 0.0597
+        }
+      },
+      "twitter_synthetic": {
+        "platform": "twitter",
+        "mapping_block": "twitter",
+        "dataset": "Twitter Bot Detection Dataset (synthetic negative control)",
+        "rf_top5": [
+          {
+            "feature": "tweet_len_chars",
+            "importance": 0.0146,
+            "tiktok_status": "not_in_raw_mapping (engineered by that track; see findings doc)"
+          },
+          {
+            "feature": "retweet_count",
+            "importance": 0.0127,
+            "tiktok_status": "proxy_not_equivalent"
+          },
+          {
+            "feature": "tweet_days_since_2020_01_01",
+            "importance": 0.0123,
+            "tiktok_status": "not_in_raw_mapping (engineered by that track; see findings doc)"
+          },
+          {
+            "feature": "tweet_hour",
+            "importance": 0.012,
+            "tiktok_status": "not_in_raw_mapping (engineered by that track; see findings doc)"
+          },
+          {
+            "feature": "hashtags:might",
+            "importance": 0.0107,
+            "tiktok_status": "not_in_raw_mapping (engineered by that track; see findings doc)"
+          }
+        ],
+        "top5_with_tiktok_equivalent": 0,
+        "rf_importance_share_by_tiktok_status": {
+          "not_in_raw_mapping (engineered by that track; see findings doc)": 0.8584,
+          "equivalent": 0.0508,
+          "missing": 0.0459,
+          "proxy_not_equivalent": 0.0448
+        }
+      },
+      "twitter_synthetic_faker_check": {
+        "verdict": "Tweet and Hashtags vocabularies are exactly Faker's en_US lorem word list"
+      }
+    },
+    "profile_and_network_features_missing_on_tiktok": [
+      "#followers",
+      "#follows",
+      "#friends",
+      "#following",
+      "age",
+      "profile pic",
+      "Follower Count",
+      "Verified",
+      "#posts"
+    ],
+    "verdict": "Transfer of a trained model to TikTok is NOT defensible with these data. Instagram: 0 of 11 features have a TikTok equivalent. Facebook: 1 of 13 (hashtags per post). X/Twitter, real accounts (the X headline dataset): 0 of 13. The superseded synthetic X file has 3 of 8 (mentions, hashtags, post time), but the X/Twitter track showed its text and hashtags are Faker-generated, so those matches carry no real behaviour. The profile and network features that the labelled models actually rank highest (followers, following/friends, favourites, community, account age, profile completeness, verified) are entirely absent from TikTok. The few nominal matches sit on scales up to five orders of magnitude apart, because the TikTok sample contains only viral videos. Above all, TikTok has no labels, so a transferred score could never be validated: its precision on TikTok would be unknown, and the 'audit suspiciously high scores' rule could not be applied.",
+    "narrow_transfer": {
+      "considered": "A 'narrow transfer' on the features TikTok shares with a labelled source: hashtags per post (Facebook, real) plus mentions and hashtags per post (synthetic X only).",
+      "rejected_because": [
+        "Two content-count features cannot carry a bot model: on the labelled data they are not where the signal is (profile and network features are).",
+        "The labelled sources disagree with each other on even these features: Facebook 'tags/post' median ~39 vs synthetic-X mentions 0-5.",
+        "Within-platform rank normalisation would align the scales, but it assumes a bot's percentile means the same thing on every platform. That cannot be tested without TikTok labels.",
+        "No TikTok ground truth means no way to measure the transferred model, and an unmeasured classifier must not feed a moderation queue."
+      ]
+    },
+    "what_transferable": "The method transfers: author-level aggregation, explicit NA handling, indicator-not-label framing, and the human-review output. The trained models do not.",
+    "what_would_be_needed": [
+      "Account-level metadata per author: follower_count, following_count, total video count, account creation date (account age), verified flag, bio text, avatar present.",
+      "A population sample that is not popularity-filtered, e.g. accounts reached via hashtag/search crawl, including low-reach accounts.",
+      "A labelled TikTok subset built by documented human annotation (written criteria, two annotators, inter-annotator agreement reported), or an external ground-truth source such as platform takedown lists, with provenance stated. Never labels inferred from the indicators in this track, which would be circular.",
+      "Per-video scrape timestamps, so engagement can be normalised by exposure time."
+    ]
+  },
+  "leakage_audit": {
+    "checks_run": [
+      "identifiers (video_id, author, video_url) excluded from every feature and model input",
+      "video_id and video_url uniqueness (dedup claim of the file name verified)",
+      "video_url consistent with author and video_id columns",
+      "author namespace collision between scrape passes (the '@' prefix)",
+      "likes > plays impossibility check",
+      "display-rounding of counts quantified",
+      "IsolationForest score and engagement flags tested for dependence on reach (popularity confound)",
+      "Spark sha2 author_key matches the documented python author_key()"
+    ],
+    "findings": [
+      "video_id unique: True; video_url unique: True",
+      "1 author(s) appear in both scrape passes under '@handle' and 'handle'; merged by normalisation",
+      "likes > plays rows: 0",
+      "IsolationForest score vs log reach: Spearman 0.1531; 14% of engagement flags fall in the top reach decile (10% expected if unrelated)",
+      "No supervised leakage audit applies: there is no label to leak."
+    ]
+  },
+  "outputs": {
+    "author_profile_csv": "outputs/predictions/tiktok_author_profile.csv",
+    "figures": {
+      "videos_per_author": "outputs/figures/tiktok_videos_per_author.png",
+      "feature_distributions": "outputs/figures/tiktok_feature_distributions.png",
+      "indicator_coverage": "outputs/figures/tiktok_indicator_coverage.png",
+      "regularity_vs_null": "outputs/figures/tiktok_regularity_vs_null.png",
+      "engagement_vs_reach": "outputs/figures/tiktok_engagement_vs_reach.png",
+      "cross_platform_feature_overlap": "outputs/figures/tiktok_cross_platform_feature_overlap.png"
+    },
+    "curated_local_only": [
+      "data/curated/tiktok_videos_clean.parquet",
+      "data/curated/tiktok_author_key_map.csv (contains handles: do not share)"
+    ]
+  },
+  "limitations": [
+    "NO GROUND TRUTH. Every flag is an indicator for human review, never a bot label. The share of bots in this population is unknown, so the precision of any flag is unknown.",
+    "Bot does not mean harmful, and an indicator firing does not mean bot.",
+    "Popularity-filtered sample: every video has >= ~141k plays, and low-reach accounts are absent.",
+    "95.4% of authors have one video, so the strongest signal (timing) is undefined for them.",
+    "Posting intervals are between captured viral videos, not all uploads: they are thinned.",
+    "No follower / following / account-age / profile data: the features that matter on the labelled platforms do not exist here.",
+    "Counts are display-rounded (about 3 significant figures).",
+    "Engagement is not normalised for exposure time (scrape time unknown for 99.9% of rows).",
+    "Timestamp timezone is not documented. Values are treated as naive UTC, so hour-of-day features are not interpreted.",
+    "Coordination cannot be assessed (no links between accounts in the data).",
+    "views/plays and create_time/posted_time are assumed to be the same quantity under two names. This affects 7 rows and cannot be verified, because the columns never co-occur."
+  ],
+  "_generated_at": "2026-11-07T18:52:35.529241+00:00",
+  "_track": "tiktok"
+}

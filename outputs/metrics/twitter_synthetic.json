@@ -1,0 +1,1448 @@
+{
+  "platform": "twitter",
+  "dataset": {
+    "name": "Twitter Bot Detection Dataset (synthetic negative control)",
+    "source": "kaggle: goyaladi/twitter-bot-detection-dataset",
+    "file": "data/landing/twitter_bot_detection/bot_detection_data.csv",
+    "n_rows": 50000,
+    "label_col": "Bot Label",
+    "positive_means": "Bot Label = 1 (bot) -> 1 = Inauthentic (operational mapping)",
+    "role_in_study": "negative control - original Worksheet 2/3 dataset, shown to be generated noise and set aside"
+  },
+  "class_balance": {
+    "n_authentic": 24982,
+    "n_inauthentic": 25018,
+    "positive_rate": 0.5004
+  },
+  "split": {
+    "method": "stratified_80_20",
+    "seed": 42,
+    "n_train": 40128,
+    "n_test": 9872,
+    "implementation": "common.stratified_split (sampleBy per class, anti-join)"
+  },
+  "features": {
+    "used": [
+      "retweet_count",
+      "mention_count",
+      "follower_count",
+      "verified",
+      "tweet_hour",
+      "tweet_day_of_week",
+      "tweet_days_since_2020_01_01",
+      "tweet_len_chars",
+      "tweet_len_words",
+      "has_hashtags",
+      "hashtag_count",
+      "tweet_tfidf",
+      "hashtags_tfidf"
+    ],
+    "n_assembled_dimensions": 1949,
+    "dropped": {
+      "User ID": "identifier (contract rule 1)",
+      "Username": "identifier (contract rule 1)",
+      "Location": "free-text place name, 25199 distinct values in 50000 rows (median 2 rows per value); Faker city pattern with prefix/suffix unrelated to label (chi2 p = 0.9695 / 0.724)",
+      "Created At": "decomposed into tweet_hour, tweet_day_of_week, tweet_days_since_2020_01_01"
+    },
+    "engineered": {
+      "verified": "Verified == 'True' -> 1.0, 'False' -> 0.0 (no other values present)",
+      "tweet_hour": "hour(Created At)",
+      "tweet_day_of_week": "dayofweek(Created At), 1 = Sunday",
+      "tweet_days_since_2020_01_01": "datediff(Created At, 2020-01-01)",
+      "tweet_len_chars": "length(Tweet)",
+      "tweet_len_words": "number of whitespace-separated words in Tweet",
+      "has_hashtags": "Hashtags not empty (NULL = tweet had no hashtags)",
+      "hashtag_count": "number of hashtags; 0 when the tweet had none (a true zero)",
+      "tweet_tfidf": "RegexTokenizer -> CountVectorizer(vocabSize=1000, minDF=5) -> IDF(minDocFreq=5) on Tweet",
+      "hashtags_tfidf": "same TF-IDF chain on Hashtags"
+    },
+    "missing_values": "Only Hashtags has NULLs (16.7%); NULL means the tweet carried no hashtags, so it becomes an empty list. Every model input is asserted NULL-free; nothing is zero-filled.",
+    "class_weights": {
+      "0": 1.0014,
+      "1": 0.9986,
+      "train_counts": {
+        "1": 20092,
+        "0": 20036
+      },
+      "formula": "n_train / (2 * n_class)"
+    }
+  },
+  "models": {
+    "random_forest": {
+      "params": {
+        "numTrees": 150,
+        "featureSubsetStrategy": "sqrt",
+        "impurity": "gini",
+        "maxBins": 32,
+        "minInstancesPerNode": 5,
+        "subsamplingRate": 1.0,
+        "bootstrap": true,
+        "seed": 42,
+        "maxDepth": 8,
+        "weightCol": "weight (inverse class frequency, train)",
+        "labelCol": "label",
+        "n_trees_fitted": 150,
+        "total_nodes": 6356
+      },
+      "cross_validation": {
+        "folds": 3,
+        "metric": "areaUnderPR",
+        "seed": 42,
+        "scope": "inside training split only",
+        "grid": [
+          {
+            "maxDepth": 8,
+            "cv_mean_areaUnderPR": 0.5013,
+            "cv_std_areaUnderPR": 0.0074
+          },
+          {
+            "maxDepth": 12,
+            "cv_mean_areaUnderPR": 0.5004,
+            "cv_std_areaUnderPR": 0.0059
+          },
+          {
+            "maxDepth": 16,
+            "cv_mean_areaUnderPR": 0.4999,
+            "cv_std_areaUnderPR": 0.0072
+          },
+          {
+            "maxDepth": 20,
+            "cv_mean_areaUnderPR": 0.4993,
+            "cv_std_areaUnderPR": 0.0073
+          }
+        ],
+        "selected": {
+          "maxDepth": 8
+        }
+      },
+      "metrics": {
+        "confusion_matrix": {
+          "true_negative": 2465,
+          "false_positive": 2481,
+          "false_negative": 2509,
+          "true_positive": 2417
+        },
+        "n_test": 9872,
+        "accuracy": 0.4945,
+        "precision_positive": 0.4935,
+        "recall_positive": 0.4907,
+        "f1_positive": 0.4921,
+        "specificity": 0.4984,
+        "balanced_accuracy": 0.4945,
+        "mcc": -0.011,
+        "roc_auc": 0.4925,
+        "pr_auc": 0.4902,
+        "baseline_majority_class": {
+          "predicts": 0,
+          "accuracy": 0.501,
+          "accuracy_lift_of_model": -0.0065
+        },
+        "accuracy_wilson_95ci": [
+          0.4847,
+          0.5044
+        ],
+        "roc_auc_no_signal_95band": [
+          0.4886,
+          0.5114
+        ],
+        "pr_auc_no_signal_reference": 0.499,
+        "review_queue": [
+          {
+            "top_fraction": 0.05,
+            "k_accounts": 494,
+            "precision_at_k": 0.4534,
+            "recall_at_k": 0.0455,
+            "base_rate": 0.499
+          },
+          {
+            "top_fraction": 0.1,
+            "k_accounts": 987,
+            "precision_at_k": 0.4701,
+            "recall_at_k": 0.0942,
+            "base_rate": 0.499
+          },
+          {
+            "top_fraction": 0.2,
+            "k_accounts": 1974,
+            "precision_at_k": 0.4883,
+            "recall_at_k": 0.1957,
+            "base_rate": 0.499
+          }
+        ],
+        "decision_threshold": 0.5,
+        "threshold_note": "0.5 on class-weighted models (equivalent to a balanced-prior cut-off)"
+      },
+      "feature_importance": [
+        {
+          "feature": "tweet_len_chars",
+          "importance": 0.014632,
+          "rank": 1
+        },
+        {
+          "feature": "retweet_count",
+          "importance": 0.012746,
+          "rank": 2
+        },
+        {
+          "feature": "tweet_days_since_2020_01_01",
+          "importance": 0.012296,
+          "rank": 3
+        },
+        {
+          "feature": "tweet_hour",
+          "importance": 0.012012,
+          "rank": 4
+        },
+        {
+          "feature": "hashtags:might",
+          "importance": 0.010732,
+          "rank": 5
+        },
+        {
+          "feature": "follower_count",
+          "importance": 0.010372,
+          "rank": 6
+        },
+        {
+          "feature": "hashtags:fear",
+          "importance": 0.01036,
+          "rank": 7
+        },
+        {
+          "feature": "mention_count",
+          "importance": 0.009459,
+          "rank": 8
+        },
+        {
+          "feature": "tweet:finish",
+          "importance": 0.008931,
+          "rank": 9
+        },
+        {
+          "feature": "tweet_len_words",
+          "importance": 0.00863,
+          "rank": 10
+        },
+        {
+          "feature": "hashtags:send",
+          "importance": 0.008475,
+          "rank": 11
+        },
+        {
+          "feature": "tweet:away",
+          "importance": 0.007373,
+          "rank": 12
+        },
+        {
+          "feature": "tweet_day_of_week",
+          "importance": 0.006213,
+          "rank": 13
+        },
+        {
+          "feature": "hashtags:major",
+          "importance": 0.005901,
+          "rank": 14
+        },
+        {
+          "feature": "hashtags:candidate",
+          "importance": 0.005509,
+          "rank": 15
+        },
+        {
+          "feature": "hashtags:light",
+          "importance": 0.005008,
+          "rank": 16
+        },
+        {
+          "feature": "hashtag_count",
+          "importance": 0.00499,
+          "rank": 17
+        },
+        {
+          "feature": "tweet:skin",
+          "importance": 0.004622,
+          "rank": 18
+        },
+        {
+          "feature": "tweet:case",
+          "importance": 0.004563,
+          "rank": 19
+        },
+        {
+          "feature": "hashtags:pretty",
+          "importance": 0.004419,
+          "rank": 20
+        },
+        {
+          "feature": "tweet:reach",
+          "importance": 0.004278,
+          "rank": 21
+        },
+        {
+          "feature": "hashtags:section",
+          "importance": 0.00427,
+          "rank": 22
+        },
+        {
+          "feature": "tweet:student",
+          "importance": 0.004197,
+          "rank": 23
+        },
+        {
+          "feature": "tweet:court",
+          "importance": 0.004131,
+          "rank": 24
+        },
+        {
+          "feature": "tweet:third",
+          "importance": 0.003958,
+          "rank": 25
+        },
+        {
+          "feature": "hashtags:player",
+          "importance": 0.003923,
+          "rank": 26
+        },
+        {
+          "feature": "hashtags:edge",
+          "importance": 0.003827,
+          "rank": 27
+        },
+        {
+          "feature": "tweet:social",
+          "importance": 0.003776,
+          "rank": 28
+        },
+        {
+          "feature": "tweet:painting",
+          "importance": 0.003699,
+          "rank": 29
+        },
+        {
+          "feature": "hashtags:strong",
+          "importance": 0.003237,
+          "rank": 30
+        },
+        {
+          "feature": "tweet:style",
+          "importance": 0.003114,
+          "rank": 31
+        },
+        {
+          "feature": "tweet:short",
+          "importance": 0.003098,
+          "rank": 32
+        },
+        {
+          "feature": "tweet:blood",
+          "importance": 0.00307,
+          "rank": 33
+        },
+        {
+          "feature": "tweet:computer",
+          "importance": 0.002994,
+          "rank": 34
+        },
+        {
+          "feature": "tweet:performance",
+          "importance": 0.002949,
+          "rank": 35
+        },
+        {
+          "feature": "hashtags:big",
+          "importance": 0.002906,
+          "rank": 36
+        },
+        {
+          "feature": "hashtags:me",
+          "importance": 0.00288,
+          "rank": 37
+        },
+        {
+          "feature": "tweet:hear",
+          "importance": 0.00282,
+          "rank": 38
+        },
+        {
+          "feature": "tweet:bag",
+          "importance": 0.002784,
+          "rank": 39
+        },
+        {
+          "feature": "tweet:guess",
+          "importance": 0.002768,
+          "rank": 40
+        },
+        {
+          "feature": "tweet:approach",
+          "importance": 0.002754,
+          "rank": 41
+        },
+        {
+          "feature": "verified",
+          "importance": 0.00269,
+          "rank": 42
+        },
+        {
+          "feature": "hashtags:reach",
+          "importance": 0.002568,
+          "rank": 43
+        },
+        {
+          "feature": "tweet:behavior",
+          "importance": 0.002521,
+          "rank": 44
+        },
+        {
+          "feature": "tweet:if",
+          "importance": 0.002517,
+          "rank": 45
+        },
+        {
+          "feature": "tweet:building",
+          "importance": 0.002504,
+          "rank": 46
+        },
+        {
+          "feature": "hashtags:across",
+          "importance": 0.00249,
+          "rank": 47
+        },
+        {
+          "feature": "tweet:our",
+          "importance": 0.002488,
+          "rank": 48
+        },
+        {
+          "feature": "tweet:through",
+          "importance": 0.002486,
+          "rank": 49
+        },
+        {
+          "feature": "tweet:car",
+          "importance": 0.0024,
+          "rank": 50
+        },
+        {
+          "feature": "hashtags:message",
+          "importance": 0.002376,
+          "rank": 51
+        },
+        {
+          "feature": "hashtags:draw",
+          "importance": 0.00237,
+          "rank": 52
+        },
+        {
+          "feature": "hashtags:age",
+          "importance": 0.002335,
+          "rank": 53
+        },
+        {
+          "feature": "hashtags:reflect",
+          "importance": 0.002317,
+          "rank": 54
+        },
+        {
+          "feature": "hashtags:wide",
+          "importance": 0.002299,
+          "rank": 55
+        },
+        {
+          "feature": "tweet:along",
+          "importance": 0.002285,
+          "rank": 56
+        },
+        {
+          "feature": "tweet:know",
+          "importance": 0.002266,
+          "rank": 57
+        },
+        {
+          "feature": "hashtags:professor",
+          "importance": 0.002264,
+          "rank": 58
+        },
+        {
+          "feature": "hashtags:anyone",
+          "importance": 0.002256,
+          "rank": 59
+        },
+        {
+          "feature": "tweet:concern",
+          "importance": 0.00225,
+          "rank": 60
+        }
+      ],
+      "permutation_importance": [
+        {
+          "feature": "hashtags_tfidf (Hashtags text)",
+          "columns": [
+            "hashtags_text"
+          ],
+          "roc_auc_drop_mean": 0.001739,
+          "roc_auc_drop_std": 0.003666,
+          "pr_auc_drop_mean": -0.002255,
+          "pr_auc_drop_std": 0.002838,
+          "rank": 1
+        },
+        {
+          "feature": "tweet_len_words",
+          "columns": [
+            "tweet_len_words"
+          ],
+          "roc_auc_drop_mean": 0.000527,
+          "roc_auc_drop_std": 0.000945,
+          "pr_auc_drop_mean": 0.000486,
+          "pr_auc_drop_std": 0.000528,
+          "rank": 2
+        },
+        {
+          "feature": "hashtag_count",
+          "columns": [
+            "hashtag_count"
+          ],
+          "roc_auc_drop_mean": 2.8e-05,
+          "roc_auc_drop_std": 0.000393,
+          "pr_auc_drop_mean": 4.6e-05,
+          "pr_auc_drop_std": 0.000248,
+          "rank": 3
+        },
+        {
+          "feature": "mention_count",
+          "columns": [
+            "mention_count"
+          ],
+          "roc_auc_drop_mean": -7e-05,
+          "roc_auc_drop_std": 0.000458,
+          "pr_auc_drop_mean": -0.000143,
+          "pr_auc_drop_std": 0.000168,
+          "rank": 4
+        },
+        {
+          "feature": "follower_count",
+          "columns": [
+            "follower_count"
+          ],
+          "roc_auc_drop_mean": -0.000127,
+          "roc_auc_drop_std": 0.000412,
+          "pr_auc_drop_mean": -0.000472,
+          "pr_auc_drop_std": 0.000207,
+          "rank": 5
+        },
+        {
+          "feature": "tweet_hour",
+          "columns": [
+            "tweet_hour"
+          ],
+          "roc_auc_drop_mean": -0.000253,
+          "roc_auc_drop_std": 0.000534,
+          "pr_auc_drop_mean": -0.000291,
+          "pr_auc_drop_std": 0.000495,
+          "rank": 6
+        },
+        {
+          "feature": "verified",
+          "columns": [
+            "verified"
+          ],
+          "roc_auc_drop_mean": -0.000276,
+          "roc_auc_drop_std": 0.00032,
+          "pr_auc_drop_mean": -0.000217,
+          "pr_auc_drop_std": 0.000224,
+          "rank": 7
+        },
+        {
+          "feature": "tweet_days_since_2020_01_01",
+          "columns": [
+            "tweet_days_since_2020_01_01"
+          ],
+          "roc_auc_drop_mean": -0.000424,
+          "roc_auc_drop_std": 0.000756,
+          "pr_auc_drop_mean": -0.000137,
+          "pr_auc_drop_std": 0.000666,
+          "rank": 8
+        },
+        {
+          "feature": "tweet_day_of_week",
+          "columns": [
+            "tweet_day_of_week"
+          ],
+          "roc_auc_drop_mean": -0.00051,
+          "roc_auc_drop_std": 0.000378,
+          "pr_auc_drop_mean": -0.000265,
+          "pr_auc_drop_std": 0.000255,
+          "rank": 9
+        },
+        {
+          "feature": "has_hashtags",
+          "columns": [
+            "has_hashtags"
+          ],
+          "roc_auc_drop_mean": -0.000882,
+          "roc_auc_drop_std": 8.2e-05,
+          "pr_auc_drop_mean": -0.000532,
+          "pr_auc_drop_std": 7.7e-05,
+          "rank": 10
+        },
+        {
+          "feature": "tweet_len_chars",
+          "columns": [
+            "tweet_len_chars"
+          ],
+          "roc_auc_drop_mean": -0.001551,
+          "roc_auc_drop_std": 0.000623,
+          "pr_auc_drop_mean": -0.001157,
+          "pr_auc_drop_std": 0.000288,
+          "rank": 11
+        },
+        {
+          "feature": "retweet_count",
+          "columns": [
+            "retweet_count"
+          ],
+          "roc_auc_drop_mean": -0.001748,
+          "roc_auc_drop_std": 0.001143,
+          "pr_auc_drop_mean": -0.001591,
+          "pr_auc_drop_std": 0.000886,
+          "rank": 12
+        },
+        {
+          "feature": "tweet_tfidf (Tweet text)",
+          "columns": [
+            "tweet"
+          ],
+          "roc_auc_drop_mean": -0.005741,
+          "roc_auc_drop_std": 0.004495,
+          "pr_auc_drop_mean": -0.00604,
+          "pr_auc_drop_std": 0.004825,
+          "rank": 13
+        }
+      ],
+      "permutation_importance_meta": {
+        "baseline_roc_auc_sklearn": 0.4925,
+        "baseline_avg_precision_sklearn": 0.4905,
+        "repeats": 5,
+        "seed": 42,
+        "evaluated_on": "held-out test split",
+        "metric_impl": "sklearn roc_auc_score / average_precision_score on Spark-scored probabilities"
+      },
+      "feature_importance_grouped": [
+        {
+          "feature": "tweet_tfidf (all terms)",
+          "importance": 0.568522
+        },
+        {
+          "feature": "hashtags_tfidf (all terms)",
+          "importance": 0.335424
+        },
+        {
+          "feature": "tweet_len_chars",
+          "importance": 0.014632
+        },
+        {
+          "feature": "retweet_count",
+          "importance": 0.012746
+        },
+        {
+          "feature": "tweet_days_since_2020_01_01",
+          "importance": 0.012296
+        },
+        {
+          "feature": "tweet_hour",
+          "importance": 0.012012
+        },
+        {
+          "feature": "follower_count",
+          "importance": 0.010372
+        },
+        {
+          "feature": "mention_count",
+          "importance": 0.009459
+        },
+        {
+          "feature": "tweet_len_words",
+          "importance": 0.00863
+        },
+        {
+          "feature": "tweet_day_of_week",
+          "importance": 0.006213
+        },
+        {
+          "feature": "hashtag_count",
+          "importance": 0.00499
+        },
+        {
+          "feature": "verified",
+          "importance": 0.00269
+        },
+        {
+          "feature": "has_hashtags",
+          "importance": 0.002036
+        }
+      ]
+    },
+    "logistic_regression": {
+      "params": {
+        "maxIter": 200,
+        "elasticNetParam": 0.0,
+        "standardization": true,
+        "threshold": 0.5,
+        "family": "binomial",
+        "regParam": 0.001,
+        "weightCol": "weight (inverse class frequency, train)",
+        "scaler": {
+          "type": "StandardScaler",
+          "withMean": false,
+          "withStd": true
+        },
+        "coefficients_are_on": "standardised features (per 1 SD)",
+        "intercept": 0.041406
+      },
+      "cross_validation": {
+        "folds": 3,
+        "metric": "areaUnderPR",
+        "seed": 42,
+        "scope": "inside training split only",
+        "grid": [
+          {
+            "regParam": 0.001,
+            "cv_mean_areaUnderPR": 0.4979,
+            "cv_std_areaUnderPR": 0.006
+          },
+          {
+            "regParam": 0.01,
+            "cv_mean_areaUnderPR": 0.4979,
+            "cv_std_areaUnderPR": 0.0061
+          },
+          {
+            "regParam": 0.1,
+            "cv_mean_areaUnderPR": 0.4977,
+            "cv_std_areaUnderPR": 0.0061
+          }
+        ],
+        "selected": {
+          "regParam": 0.001
+        }
+      },
+      "metrics": {
+        "confusion_matrix": {
+          "true_negative": 2475,
+          "false_positive": 2471,
+          "false_negative": 2476,
+          "true_positive": 2450
+        },
+        "n_test": 9872,
+        "accuracy": 0.4989,
+        "precision_positive": 0.4979,
+        "recall_positive": 0.4974,
+        "f1_positive": 0.4976,
+        "specificity": 0.5004,
+        "balanced_accuracy": 0.4989,
+        "mcc": -0.0022,
+        "roc_auc": 0.4954,
+        "pr_auc": 0.4935,
+        "baseline_majority_class": {
+          "predicts": 0,
+          "accuracy": 0.501,
+          "accuracy_lift_of_model": -0.0021
+        },
+        "accuracy_wilson_95ci": [
+          0.489,
+          0.5087
+        ],
+        "roc_auc_no_signal_95band": [
+          0.4886,
+          0.5114
+        ],
+        "pr_auc_no_signal_reference": 0.499,
+        "review_queue": [
+          {
+            "top_fraction": 0.05,
+            "k_accounts": 494,
+            "precision_at_k": 0.4717,
+            "recall_at_k": 0.0473,
+            "base_rate": 0.499
+          },
+          {
+            "top_fraction": 0.1,
+            "k_accounts": 987,
+            "precision_at_k": 0.4934,
+            "recall_at_k": 0.0989,
+            "base_rate": 0.499
+          },
+          {
+            "top_fraction": 0.2,
+            "k_accounts": 1974,
+            "precision_at_k": 0.4904,
+            "recall_at_k": 0.1965,
+            "base_rate": 0.499
+          }
+        ],
+        "decision_threshold": 0.5,
+        "threshold_note": "0.5 on class-weighted models (equivalent to a balanced-prior cut-off)"
+      },
+      "feature_importance": [
+        {
+          "feature": "hashtag_count",
+          "coefficient": 0.068789,
+          "rank": 1
+        },
+        {
+          "feature": "tweet_len_words",
+          "coefficient": -0.041043,
+          "rank": 2
+        },
+        {
+          "feature": "hashtags:might",
+          "coefficient": 0.040124,
+          "rank": 3
+        },
+        {
+          "feature": "hashtags:fear",
+          "coefficient": -0.037488,
+          "rank": 4
+        },
+        {
+          "feature": "tweet:away",
+          "coefficient": -0.036607,
+          "rank": 5
+        },
+        {
+          "feature": "tweet:finish",
+          "coefficient": 0.036543,
+          "rank": 6
+        },
+        {
+          "feature": "hashtags:pretty",
+          "coefficient": -0.034863,
+          "rank": 7
+        },
+        {
+          "feature": "hashtags:major",
+          "coefficient": -0.034348,
+          "rank": 8
+        },
+        {
+          "feature": "hashtags:no",
+          "coefficient": -0.032041,
+          "rank": 9
+        },
+        {
+          "feature": "tweet:third",
+          "coefficient": 0.030703,
+          "rank": 10
+        },
+        {
+          "feature": "tweet:court",
+          "coefficient": 0.030167,
+          "rank": 11
+        },
+        {
+          "feature": "hashtags:recognize",
+          "coefficient": -0.029775,
+          "rank": 12
+        },
+        {
+          "feature": "hashtags:require",
+          "coefficient": -0.029438,
+          "rank": 13
+        },
+        {
+          "feature": "tweet:approach",
+          "coefficient": 0.029063,
+          "rank": 14
+        },
+        {
+          "feature": "hashtags:section",
+          "coefficient": -0.028949,
+          "rank": 15
+        },
+        {
+          "feature": "hashtags:send",
+          "coefficient": -0.028812,
+          "rank": 16
+        },
+        {
+          "feature": "tweet:case",
+          "coefficient": -0.028592,
+          "rank": 17
+        },
+        {
+          "feature": "tweet:reach",
+          "coefficient": -0.028569,
+          "rank": 18
+        },
+        {
+          "feature": "tweet:computer",
+          "coefficient": 0.028299,
+          "rank": 19
+        },
+        {
+          "feature": "hashtags:through",
+          "coefficient": -0.028271,
+          "rank": 20
+        },
+        {
+          "feature": "tweet:find",
+          "coefficient": 0.02815,
+          "rank": 21
+        },
+        {
+          "feature": "hashtags:south",
+          "coefficient": -0.028138,
+          "rank": 22
+        },
+        {
+          "feature": "hashtags:these",
+          "coefficient": 0.028125,
+          "rank": 23
+        },
+        {
+          "feature": "tweet:end",
+          "coefficient": -0.0277,
+          "rank": 24
+        },
+        {
+          "feature": "hashtags:big",
+          "coefficient": 0.027381,
+          "rank": 25
+        },
+        {
+          "feature": "hashtags:attorney",
+          "coefficient": -0.026922,
+          "rank": 26
+        },
+        {
+          "feature": "hashtags:strong",
+          "coefficient": -0.026773,
+          "rank": 27
+        },
+        {
+          "feature": "hashtags:him",
+          "coefficient": 0.026032,
+          "rank": 28
+        },
+        {
+          "feature": "tweet:through",
+          "coefficient": 0.025961,
+          "rank": 29
+        },
+        {
+          "feature": "hashtags:all",
+          "coefficient": -0.025723,
+          "rank": 30
+        },
+        {
+          "feature": "hashtags:sea",
+          "coefficient": -0.025607,
+          "rank": 31
+        },
+        {
+          "feature": "hashtags:congress",
+          "coefficient": -0.025486,
+          "rank": 32
+        },
+        {
+          "feature": "hashtags:light",
+          "coefficient": 0.025461,
+          "rank": 33
+        },
+        {
+          "feature": "tweet:avoid",
+          "coefficient": 0.025265,
+          "rank": 34
+        },
+        {
+          "feature": "tweet:process",
+          "coefficient": 0.025215,
+          "rank": 35
+        },
+        {
+          "feature": "hashtags:candidate",
+          "coefficient": -0.025167,
+          "rank": 36
+        },
+        {
+          "feature": "hashtags:try",
+          "coefficient": -0.025152,
+          "rank": 37
+        },
+        {
+          "feature": "tweet:social",
+          "coefficient": -0.025138,
+          "rank": 38
+        },
+        {
+          "feature": "hashtags:peace",
+          "coefficient": -0.025113,
+          "rank": 39
+        },
+        {
+          "feature": "hashtags:include",
+          "coefficient": -0.024824,
+          "rank": 40
+        },
+        {
+          "feature": "hashtags:billion",
+          "coefficient": 0.024761,
+          "rank": 41
+        },
+        {
+          "feature": "tweet:along",
+          "coefficient": -0.024585,
+          "rank": 42
+        },
+        {
+          "feature": "hashtags:draw",
+          "coefficient": 0.024457,
+          "rank": 43
+        },
+        {
+          "feature": "tweet:hear",
+          "coefficient": 0.024283,
+          "rank": 44
+        },
+        {
+          "feature": "tweet:building",
+          "coefficient": 0.024262,
+          "rank": 45
+        },
+        {
+          "feature": "hashtags:specific",
+          "coefficient": -0.024244,
+          "rank": 46
+        },
+        {
+          "feature": "tweet:catch",
+          "coefficient": 0.024196,
+          "rank": 47
+        },
+        {
+          "feature": "hashtags:realize",
+          "coefficient": -0.024158,
+          "rank": 48
+        },
+        {
+          "feature": "hashtags:must",
+          "coefficient": -0.02399,
+          "rank": 49
+        },
+        {
+          "feature": "tweet:myself",
+          "coefficient": 0.0239,
+          "rank": 50
+        },
+        {
+          "feature": "tweet:hair",
+          "coefficient": -0.023796,
+          "rank": 51
+        },
+        {
+          "feature": "tweet:skin",
+          "coefficient": 0.023718,
+          "rank": 52
+        },
+        {
+          "feature": "hashtags:international",
+          "coefficient": -0.023582,
+          "rank": 53
+        },
+        {
+          "feature": "hashtags:guy",
+          "coefficient": 0.023514,
+          "rank": 54
+        },
+        {
+          "feature": "tweet:cold",
+          "coefficient": 0.023395,
+          "rank": 55
+        },
+        {
+          "feature": "tweet:short",
+          "coefficient": -0.023266,
+          "rank": 56
+        },
+        {
+          "feature": "hashtags:worker",
+          "coefficient": 0.023107,
+          "rank": 57
+        },
+        {
+          "feature": "hashtags:player",
+          "coefficient": 0.023003,
+          "rank": 58
+        },
+        {
+          "feature": "tweet:response",
+          "coefficient": 0.022978,
+          "rank": 59
+        },
+        {
+          "feature": "hashtags:across",
+          "coefficient": -0.022928,
+          "rank": 60
+        }
+      ],
+      "permutation_importance": [
+        {
+          "feature": "hashtags_tfidf (Hashtags text)",
+          "columns": [
+            "hashtags_text"
+          ],
+          "roc_auc_drop_mean": 0.000655,
+          "roc_auc_drop_std": 0.004008,
+          "pr_auc_drop_mean": -0.00254,
+          "pr_auc_drop_std": 0.003562,
+          "rank": 1
+        },
+        {
+          "feature": "tweet_len_words",
+          "columns": [
+            "tweet_len_words"
+          ],
+          "roc_auc_drop_mean": 0.00055,
+          "roc_auc_drop_std": 0.000658,
+          "pr_auc_drop_mean": 0.00071,
+          "pr_auc_drop_std": 0.000309,
+          "rank": 2
+        },
+        {
+          "feature": "mention_count",
+          "columns": [
+            "mention_count"
+          ],
+          "roc_auc_drop_mean": 6.4e-05,
+          "roc_auc_drop_std": 0.000149,
+          "pr_auc_drop_mean": 1.3e-05,
+          "pr_auc_drop_std": 0.0001,
+          "rank": 3
+        },
+        {
+          "feature": "tweet_hour",
+          "columns": [
+            "tweet_hour"
+          ],
+          "roc_auc_drop_mean": 1e-06,
+          "roc_auc_drop_std": 9.6e-05,
+          "pr_auc_drop_mean": -4.3e-05,
+          "pr_auc_drop_std": 5.1e-05,
+          "rank": 4
+        },
+        {
+          "feature": "verified",
+          "columns": [
+            "verified"
+          ],
+          "roc_auc_drop_mean": -4e-06,
+          "roc_auc_drop_std": 1e-05,
+          "pr_auc_drop_mean": 3e-06,
+          "pr_auc_drop_std": 9e-06,
+          "rank": 5
+        },
+        {
+          "feature": "has_hashtags",
+          "columns": [
+            "has_hashtags"
+          ],
+          "roc_auc_drop_mean": -1.9e-05,
+          "roc_auc_drop_std": 1.5e-05,
+          "pr_auc_drop_mean": -9e-06,
+          "pr_auc_drop_std": 5.7e-05,
+          "rank": 6
+        },
+        {
+          "feature": "tweet_days_since_2020_01_01",
+          "columns": [
+            "tweet_days_since_2020_01_01"
+          ],
+          "roc_auc_drop_mean": -4.9e-05,
+          "roc_auc_drop_std": 5.9e-05,
+          "pr_auc_drop_mean": -1e-06,
+          "pr_auc_drop_std": 5.1e-05,
+          "rank": 7
+        },
+        {
+          "feature": "tweet_len_chars",
+          "columns": [
+            "tweet_len_chars"
+          ],
+          "roc_auc_drop_mean": -5.5e-05,
+          "roc_auc_drop_std": 0.000201,
+          "pr_auc_drop_mean": -0.000185,
+          "pr_auc_drop_std": 0.000137,
+          "rank": 8
+        },
+        {
+          "feature": "tweet_day_of_week",
+          "columns": [
+            "tweet_day_of_week"
+          ],
+          "roc_auc_drop_mean": -6.1e-05,
+          "roc_auc_drop_std": 6.3e-05,
+          "pr_auc_drop_mean": -2.7e-05,
+          "pr_auc_drop_std": 2.5e-05,
+          "rank": 9
+        },
+        {
+          "feature": "retweet_count",
+          "columns": [
+            "retweet_count"
+          ],
+          "roc_auc_drop_mean": -0.000142,
+          "roc_auc_drop_std": 0.000101,
+          "pr_auc_drop_mean": -0.000146,
+          "pr_auc_drop_std": 9.6e-05,
+          "rank": 10
+        },
+        {
+          "feature": "follower_count",
+          "columns": [
+            "follower_count"
+          ],
+          "roc_auc_drop_mean": -0.000272,
+          "roc_auc_drop_std": 7.4e-05,
+          "pr_auc_drop_mean": -0.000199,
+          "pr_auc_drop_std": 8.2e-05,
+          "rank": 11
+        },
+        {
+          "feature": "tweet_tfidf (Tweet text)",
+          "columns": [
+            "tweet"
+          ],
+          "roc_auc_drop_mean": -0.0008,
+          "roc_auc_drop_std": 0.001515,
+          "pr_auc_drop_mean": -0.001908,
+          "pr_auc_drop_std": 0.00141,
+          "rank": 12
+        },
+        {
+          "feature": "hashtag_count",
+          "columns": [
+            "hashtag_count"
+          ],
+          "roc_auc_drop_mean": -0.001327,
+          "roc_auc_drop_std": 0.000873,
+          "pr_auc_drop_mean": -0.00083,
+          "pr_auc_drop_std": 0.000622,
+          "rank": 13
+        }
+      ],
+      "permutation_importance_meta": {
+        "baseline_roc_auc_sklearn": 0.4954,
+        "baseline_avg_precision_sklearn": 0.494,
+        "repeats": 5,
+        "seed": 42,
+        "evaluated_on": "held-out test split",
+        "metric_impl": "sklearn roc_auc_score / average_precision_score on Spark-scored probabilities"
+      },
+      "coefficients_grouped": [
+        {
+          "feature": "hashtags_tfidf (all terms)",
+          "abs_coefficient_sum": 8.451466
+        },
+        {
+          "feature": "tweet_tfidf (all terms)",
+          "abs_coefficient_sum": 7.729671
+        },
+        {
+          "feature": "hashtag_count",
+          "abs_coefficient_sum": 0.068789
+        },
+        {
+          "feature": "tweet_len_words",
+          "abs_coefficient_sum": 0.041043
+        },
+        {
+          "feature": "tweet_len_chars",
+          "abs_coefficient_sum": 0.015849
+        },
+        {
+          "feature": "mention_count",
+          "abs_coefficient_sum": 0.011504
+        },
+        {
+          "feature": "tweet_days_since_2020_01_01",
+          "abs_coefficient_sum": 0.009141
+        },
+        {
+          "feature": "tweet_hour",
+          "abs_coefficient_sum": 0.008019
+        },
+        {
+          "feature": "follower_count",
+          "abs_coefficient_sum": 0.007567
+        },
+        {
+          "feature": "retweet_count",
+          "abs_coefficient_sum": 0.00727
+        },
+        {
+          "feature": "has_hashtags",
+          "abs_coefficient_sum": 0.006337
+        },
+        {
+          "feature": "tweet_day_of_week",
+          "abs_coefficient_sum": 0.003493
+        },
+        {
+          "feature": "verified",
+          "abs_coefficient_sum": 0.00075
+        }
+      ]
+    }
+  },
+  "dataset_validation": {
+    "n_rows": 50000,
+    "label_balance_binomial_test_p_vs_0.5": 0.8756,
+    "distinct_user_id": 50000,
+    "one_row_per_user_id": true,
+    "distinct_tweet_text": 50000,
+    "usernames_shared_by_several_user_ids": 6035,
+    "shared_usernames_with_conflicting_labels_share": 0.601,
+    "numeric_columns": {
+      "retweet_count": {
+        "min": 0.0,
+        "max": 100.0,
+        "pearson_r_with_label": 0.0012,
+        "pearson_p": 0.7799,
+        "ks_bot_vs_human_p": 0.8097,
+        "chi2_uniform_over_integer_range_p": 0.4374
+      },
+      "mention_count": {
+        "min": 0.0,
+        "max": 5.0,
+        "pearson_r_with_label": -0.0069,
+        "pearson_p": 0.1222,
+        "ks_bot_vs_human_p": 0.3167,
+        "chi2_uniform_over_integer_range_p": 0.4234
+      },
+      "follower_count": {
+        "min": 0.0,
+        "max": 10000.0,
+        "pearson_r_with_label": 0.0012,
+        "pearson_p": 0.795,
+        "ks_bot_vs_human_p": 0.9007,
+        "chi2_uniform_over_integer_range_p": 0.314
+      }
+    },
+    "max_abs_numeric_correlation_with_label": 0.0069,
+    "verified_by_label": {
+      "verified=0": {
+        "label=0": 12456,
+        "label=1": 12540
+      },
+      "verified=1": {
+        "label=0": 12526,
+        "label=1": 12478
+      }
+    },
+    "verified_chi2_p": 0.561,
+    "created_at_range": [
+      "2020-01-01 00:44:14",
+      "2023-05-31 07:53:27"
+    ],
+    "created_at_ks_bot_vs_human_p": 0.9014,
+    "tweet_hour_chi2_p": 0.5384,
+    "tweet_vocabulary_size": 971,
+    "tweet_tokens_total": 478560,
+    "hashtag_vocabulary_size": 971,
+    "hashtag_words_also_in_tweet_vocabulary_share": 1.0,
+    "tweet_words_min_max": [
+      6,
+      14
+    ],
+    "word_label_association": {
+      "words_tested_(>=200_docs)": 971,
+      "words_with_p_lt_0.05": 36,
+      "expected_by_chance_at_0.05": 48.6,
+      "smallest_p": 0.002,
+      "bonferroni_threshold": 5.15e-05,
+      "words_significant_after_bonferroni": 0
+    },
+    "location_distinct": 25199,
+    "location_faker_city_pattern": {
+      "share_matching_faker_city_suffix": 0.7488,
+      "prefix_vs_label_chi2_p": 0.9695,
+      "suffix_vs_label_chi2_p": 0.724
+    },
+    "single_feature_auc_max": 0.504,
+    "faker_provenance_check": {
+      "faker_version": "40.44.0",
+      "faker_en_US_lorem_word_list_size": 971,
+      "tweet_vocabulary_size": 971,
+      "tweet_words_in_faker_list": 971,
+      "tweet_words_not_in_faker_list": [],
+      "faker_words_absent_from_tweets": 0,
+      "hashtag_vocabulary_size": 971,
+      "hashtag_words_in_faker_list": 971,
+      "location_share_with_faker_city_prefix": 0.5,
+      "location_share_with_faker_city_suffix": 0.7488,
+      "location_share_with_prefix_or_suffix": 1.0,
+      "verdict": "Tweet and Hashtags vocabularies are exactly Faker's en_US lorem word list"
+    }
+  },
+  "leakage_audit": {
+    "checks_run": [
+      "identifier columns (User ID, Username) excluded from features",
+      "row order vs label (point-biserial) and adjacent-label agreement (sorted-file check)",
+      "User ID rank correlation with label",
+      "exact duplicate rows excluding identifiers",
+      "single-feature ROC-AUC scan on TRAIN (alarm if > 0.95)",
+      "TF-IDF vocabulary and IDF weights fitted inside each training fold only",
+      "near-99% check: headline accuracy far below 0.95, so no ceiling audit was triggered",
+      "dataset-validity checks (see dataset_validation): uniformity, label independence, closed vocabulary, one row per user",
+      "test ROC-AUC compared with the analytic no-signal band"
+    ],
+    "order_checks": [
+      {
+        "check": "row_order_vs_label",
+        "pointbiserial_r": -0.0024,
+        "p_value": 0.5947,
+        "verdict": "not sorted by label"
+      },
+      {
+        "check": "adjacent_label_agreement",
+        "observed": 0.4979,
+        "expected_if_shuffled": 0.5,
+        "verdict": "consistent with unsorted file"
+      },
+      {
+        "check": "user_id_rank_correlation_with_label",
+        "spearman_rho": 0.006,
+        "note": "identifier is excluded from features regardless"
+      }
+    ],
+    "exact_duplicate_rows_excluding_ids": 0,
+    "single_feature_auc_train": {
+      "retweet_count": 0.5019,
+      "mention_count": 0.5036,
+      "follower_count": 0.5027,
+      "verified": 0.5003,
+      "tweet_hour": 0.5024,
+      "tweet_day_of_week": 0.5007,
+      "tweet_days_since_2020_01_01": 0.5017,
+      "tweet_len_chars": 0.5002,
+      "tweet_len_words": 0.5008,
+      "has_hashtags": 0.5004,
+      "hashtag_count": 0.5012
+    },
+    "findings": [
+      "No leakage found - and nothing to leak: every column is independent of the label (max |r| = 0.0069, Verified chi2 p = 0.561, max single-feature AUC on train = 0.5036).",
+      "The dataset is synthetic. Retweet/Mention/Follower counts are uniform over integer ranges 0-100 / 0-5 / 0-10000 (chi2 uniformity p = 0.4374, 0.4234, 0.314); Tweet and Hashtags draw from the same closed list of 971 words - exactly the Faker library's en_US lorem word list; every Location has a Faker city prefix or suffix; 50000 distinct User IDs for 50000 rows (one tweet per user).",
+      "Impurity importance gives the TF-IDF terms 90% of the forest, yet shuffling the text on the test set changes ROC-AUC by -0.0057 (Tweet) and +0.0017 (Hashtags): impurity importance rewards many-valued features even when they carry no signal.",
+      "Words associated with the label at p<0.05: 36 of 971 (about 48.6 expected by chance); none survive Bonferroni.",
+      "Random Forest test ROC-AUC 0.4925 and LR 0.4954 both sit inside the no-signal 95% band [0.4886, 0.5114]; accuracy 0.4945 / 0.4989 vs majority baseline 0.501.",
+      "Result: a suspiciously LOW score that is fully explained by the data, not the model. The dataset is retained as a negative control and not used for the X/Twitter result."
+    ]
+  },
+  "limitations": [
+    "This dataset is synthetic (Faker-style text, uniform counts, labels independent of every column). No model can or should beat the baseline on it; its numbers say nothing about real Twitter bots.",
+    "Each row is a single tweet with its own User ID, so it cannot represent account-level behaviour (posting rhythm, follower growth) at all.",
+    "The label 'bot' is undefined in the source; even if it were real, 'bot' is not the same concept as Facebook 'spam' or Instagram 'fake'. 0/1 is an operational mapping.",
+    "Kept on purpose as a negative control: it shows the validation step that catches a dataset which would otherwise be reported as 'model only reaches 50%'."
+  ],
+  "_generated_at": "2026-11-07T18:44:25.397541+00:00",
+  "_track": "twitter_synthetic"
+}

@@ -35,3 +35,8 @@ outputs/predictions/
 outputs/powerbi/
 outputs/models/
 outputs/logs/
+
+# File metrik yang memuat id akun/baris: hanya dibuat ulang secara lokal (docs/adr/0007)
+outputs/metrics/cross_platform_comparison.json
+outputs/metrics/facebook.json
+outputs/metrics/instagram.json
