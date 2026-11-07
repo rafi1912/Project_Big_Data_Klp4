@@ -60,11 +60,28 @@ dideteksi otomatis jika `label_column: null`; nilai asli label dicatat di dashbo
   cd src && python process.py && python train.py
   ```
 
+## Modul bersama `src/common.py`
+Satu modul dipakai semua skrip di `src/`:
+- **konfigurasi & skema**: `load_config`, `path_of`, `landing_path`, `report_dir`, `snake`/`snake_all`,
+  `detect_label`, `standardize` (dipakai batch *dan* streaming, jadi fitur training = fitur scoring);
+- **Spark**: `get_spark(name, driver_memory="2g", cores=None)`; `cores=None` = semua core (`local[*]`),
+  driver 2 GB, 8 shuffle partition, UI mati, zona waktu UTC;
+- **helper analisis**: `stratified_split` (80:20 berstrata, seed 42, duplikat tidak hilang),
+  `evaluate_binary` (confusion matrix, precision/recall/F1, balanced accuracy, MCC, ROC-AUC, PR-AUC,
+  baseline kelas mayoritas), `importance_table`, `save_metrics`, `save_predictions`;
+- **MongoDB**: `get_mongo()` (lihat *Environment variables*).
+
+Zona data mengikuti `paths` di `config.yaml`. Pipeline ingest/process/train memakai
+`data/bronze|silver|gold/<kunci>`; jalur analisis memakai zona sendiri, **`data/curated/`** dan
+**`outputs/`**, sehingga keduanya tidak saling menimpa. Bagian `outputs/` yang berisi data per-akun
+(`predictions/`, `powerbi/`, `models/`, `logs/`) ada di `.gitignore`.
+
 ## Environment variables
 | Variabel | Wajib? | Dipakai oleh | Keterangan |
 |---|---|---|---|
 | `KAGGLE_USERNAME`, `KAGGLE_KEY` | salah satu cara login Kaggle | `scripts/download_datasets.py` | Alternatif: file `~/.kaggle/kaggle.json` (`chmod 600`), atau token baru di `KAGGLE_API_TOKEN` / `~/.kaggle/access_token`. Tidak perlu bila CSV ditaruh manual di `data/landing/<kunci>/`. |
-| `JAVA_HOME` | bila Java 17 bukan `java` default | Spark (semua skrip di `src/`) | Mis. `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` di Ubuntu. |
+| `JAVA_HOME` | bila Java 17 bukan `java` default | Spark (semua skrip di `src/`) | Tidak ada path Java yang di-hard-code di kode; mis. `export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64` di Ubuntu. |
+| `MONGO_URI`, `MONGO_DB` | hanya untuk lapisan MongoDB | `common.get_mongo()` | Dibaca dari lingkungan atau file `.env` di root repo (tidak di-commit). Tanpa `MONGO_URI`, URI dirakit dari `MONGO_INITDB_ROOT_USERNAME`/`MONGO_INITDB_ROOT_PASSWORD` + `MONGO_HOST`/`MONGO_PORT`. |
 
 Jangan pernah commit kredensial: `.env`, `.env.*` (kecuali `.env.example`) dan `kaggle.json` sudah ada di `.gitignore`.
 

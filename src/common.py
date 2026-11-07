@@ -1,8 +1,13 @@
-"""Utilitas bersama: konfigurasi, SparkSession, dan standardisasi skema.
+"""Utilitas bersama untuk semua skrip di src/: konfigurasi, SparkSession, standardisasi skema,
+helper jalur analisis, dan koneksi MongoDB.
 
 `standardize()` dipakai oleh jalur BATCH (process.py) dan jalur STREAMING
 (stream.py) sehingga fitur yang dilihat model saat training dan saat
 scoring identik (mencegah training-serving skew).
+
+Helper jalur analisis (stratified_split, evaluate_binary, importance_table, save_metrics, ...)
+dipakai oleh src/*_pipeline.py dan synthesis.py supaya split, metrik dan format keluaran sama untuk
+setiap platform. Semua path diambil dari `paths` di config.yaml.
 """
 import json
 import os
